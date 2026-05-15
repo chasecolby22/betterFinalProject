@@ -43,6 +43,8 @@ class game():
             print("Sorry bot is sleepy")
             self.player1 = humanPlayer(True, self)
             self.player2 = humanPlayer(False, self)
+            
+        
         else:
             if player1bot:
                 self.player1 = botPlayer(True, player1dif, self)
@@ -52,7 +54,6 @@ class game():
                 self.player2 = botPlayer(False, player2dif, self)
             else:
                 self.player2 = humanPlayer(False, self)
-        
         self.player1.start()
         self.player2.start()
         self.activePlayer = self.player1
@@ -175,6 +176,7 @@ class game():
                     case "b":
                         aPiece = bishop(-2, -2, self.activePlayer)
                 self.activePlayer.addPiece(aPiece)
+                self.myScreen.addSprite(aPiece)
 
         
         if eatenPiece != "EMPTY":

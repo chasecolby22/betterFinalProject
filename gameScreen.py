@@ -8,22 +8,22 @@ pink = (255, 182, 193)
 blue = (173, 216, 230)
 font = pygame.font.SysFont("Arial", 42)
 
-class onScreenTile():
-    def __init__(self, aRect, aPos):
-        self.rect = aRect
+class onScreenTile(pygame.Rect):
+    def __init__(self, aRect, aPos, aSurface, aColor):
+        super().__init__(aRect[0], aRect[1], aRect[2], aRect[3])
         self.pos = aPos
+        pygame.draw.rect(aSurface, aColor, self)
+        pygame.draw.rect(aSurface, black, aRect, width = 2)
 
 class button(pygame.Rect):
     def __init__(self, aRectSpec, aText, aSurface, aLambda):
         super().__init__(aRectSpec[0], aRectSpec[1], aRectSpec[2], aRectSpec[3])
         self.text = font.render(aText, True, black)
         self.text_rect = self.text.get_rect(center=self.center)
-        self.drawOn(aSurface)
-        self.myLambda = aLambda
-    
-    def drawOn(self, aSurface):
         pygame.draw.rect(aSurface, white, self)
         aSurface.blit(self.text, self.text_rect)
+        self.myLambda = aLambda
+        
 
     def handleClick(self, aPos):
         if self.collidepoint(aPos):
@@ -31,15 +31,26 @@ class button(pygame.Rect):
             return True
         return False
         
+class cursor(pygame.sprite.Sprite):
+    def __init__(self, anImage):
+        super().__init__()
+        self.image = pygame.image.load(anImage).convert_alpha()
         
+        self.rect = self.image.get_rect(topleft = (-100, -100)) 
+
+    def move(self, aPos):
+        self.rect = self.image.get_rect(center = aPos)   
+
 
 class gameScreen():
     def __init__(self):
         
         self.allsprites = pygame.sprite.Group()
         self.specialsprites = pygame.sprite.Group()
+        self.superSpecialSprite = pygame.sprite.Group()
         self.specialpieces = []
-        
+        self.specialCursor = ""
+        self.drawSpecialCursor = False
         self.tiles = []
         self.sur = ""
         self.game = ""
@@ -63,21 +74,19 @@ class gameScreen():
         for i in range(8):
             row = []
             for j in range(8):
-                rect = pygame.Rect(100+j*75, 50+i*75, 75, 75)
-                tile = onScreenTile(rect, (j, 7-i))
-                row.append(tile)
+                color = pink
                 if dw:
                     
-                    pygame.draw.rect(self.sur, blue, rect)
-                    pygame.draw.rect(self.sur, black, rect, width=2)
-                else:
-                    pygame.draw.rect(self.sur, pink, rect)
-                    pygame.draw.rect(self.sur, black, rect, width=2)
+                    color = blue
+                
                 if j != 7:
                     dw = not dw
                 else:
                     letter = font.render(str(8 - i), True, black)
                     self.sur.blit(letter, ((125+8*75), 60 + (i * 75)))
+                tile = onScreenTile((100+j*75, 50+i*75, 75, 75), (j, 7-i), self.sur, color)
+                
+                row.append(tile)
             self.tiles.append(row)
         thing = "ABCDEFGH"
         for i in range(8):
@@ -100,7 +109,11 @@ class gameScreen():
         self.specialpieces.append(dumbRook(9, 5, self.game.activePlayer))
         self.specialpieces.append(dumbBishop(9, 3, self.game.activePlayer))
         self.specialpieces.append(dumbKnight(9, 1, self.game.activePlayer))
+        self.specialCursor = cursor("./white/pawn.png")
+        self.superSpecialSprite.add(self.specialCursor)
+
         for item in self.specialpieces: self.specialsprites.add(item)
+        
         self.updateScreen()
         running = True
         while running:
@@ -125,29 +138,43 @@ class gameScreen():
                             
                             for item in self.specialsprites:
                                 item.kill()
+                            self.specialCursor.kill()
+                            self.drawSpecialCursor = False
+                            pygame.mouse.set_visible(True)
                             return selection
                 elif event.type == pygame.MOUSEMOTION:
                     set = False
                     for item in self.specialpieces:
                         if item.rect.collidepoint(event.pos):
-                            pygame.mouse.set_cursor(pygame.cursors.ball)
+                            pygame.mouse.set_visible(False)
+                            self.specialCursor.move(event.pos)
+                            self.drawSpecialCursor = True
+                            self.updateScreen()
                             set = True
-                    if not set:
-                        pygame.mouse.set_cursor(pygame.cursors.arrow)
+                if not set:
+                    self.specialCursor.move((-1000, -1000))
+                        
+                    self.drawSpecialCursor = False
+                    pygame.mouse.set_visible(True)
+                    self.updateScreen()
                         
 
         
     def drawSprites(self):
         self.allsprites.draw(self.sur)
         self.specialsprites.draw(self.sur)
+        if self.drawSpecialCursor: self.superSpecialSprite.draw(self.sur)
 
+    def returnButton(self, aSurface, anX, aText, aLambda):
+        return button((anX, 50, 200, 100), aText, aSurface, aLambda)
+    
     def startScreen(self):
         start = pygame.display.set_mode((800, 400))
         start.fill((255, 0, 255))
        
         buttons = []
-        buttons.append(button((50, 100, 200, 100), "No Bots", start, lambda:self.game.startGame(False, 0, False, 0)))
-        buttons.append(button((350, 100, 200, 100), "Bots", start, lambda:self.game.startGame(True, 5, True, 10)))
+        buttons.append(self.returnButton(start, 50, "No Bots", lambda:self.game.startGame(False, 0, False, 0)))
+        buttons.append(self.returnButton(start, 350, "Bots", lambda:self.game.startGame(True, 5, True, 10)))
         pygame.display.update()
         running = True
         self.game = game(self)

@@ -21,10 +21,9 @@ class dumbPiece(pygame.sprite.Sprite):
         self.y = aY
         self.coords = (100 + (75*anX), 50 + (75*(7-aY)))
         self.rect = self.image.get_rect(topleft = self.coords)
-        self.draw()
 
-    def draw(self):
-        self.myGame.myScreen.addSprite(self)
+        
+       
 
 class piece(dumbPiece):
     
@@ -86,15 +85,15 @@ class piece(dumbPiece):
         oldTile = self.tile
         oldTile.empty()
         
-        bad = False
-        try: self.myGame.getNonActivePlayer().removePiece(oldPiece)
-        except: bad = True
+        
+        self.myGame.getNonActivePlayer().removePiece(oldPiece)
+        
         newTile.setPiece(self)
         self.setCoords(anX, aY)
         if self.myGame.inCheck(self.color):
             anArray = False
         oldTile.setPiece(self)
-        if not bad: self.myGame.getNonActivePlayer().addPiece(oldPiece)
+        self.myGame.getNonActivePlayer().addPiece(oldPiece)
         newTile.setPiece(oldPiece)
         self.setCoords(oldX, oldY)
         return anArray

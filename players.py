@@ -24,6 +24,9 @@ class player():
         for i in range(8):
             self.pieces.append(pawn(i, self.pawnsRow, self))
 
+        for piece in self.pieces:
+            self.myScreen.addSprite(piece)
+
     def getCheckers(self, aKing):
         checkers = []
         for item in self.pieces:
@@ -64,12 +67,10 @@ class player():
     def hasPiece(self, col, row):
         aPiece = self.myGame.board.getTile(col, row).getPiece()
        
-        if aPiece == "EMPTY":
+        if aPiece == "EMPTY" or aPiece.getColor() != self.color:
             return False
-        if aPiece.getColor() == self.color:
-            return aPiece
         
-        return False
+        return aPiece
     
     def getColor(self):
         return self.color
@@ -88,7 +89,7 @@ class humanPlayer(player):
         if not validPiece: return False
         for row in self.myGame.onScreenTiles():
             for tile in row:
-                if tile.rect.collidepoint(pos):
+                if tile.collidepoint(pos):
                     col = tile.pos[0]
                     row = tile.pos[1]
                     if validPiece.cCanMove(col, row):
@@ -101,7 +102,7 @@ class humanPlayer(player):
                         if validPiece.name() == "pawn":
                             if row == self.myGame.getNonActivePlayer().row:
                                 
-                                promotion = self.myGame.myScreen.drawPromotion()
+                                promotion = self.myScreen.drawPromotion()
                         self.tempMoveString = startX + startY + endX + endY + promotion
                         if self.tempMoveString != self.myGame.botString:
                             self.myGame.drawBot()
