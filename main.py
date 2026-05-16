@@ -2,4 +2,4 @@
 from gameScreen import gameScreen
 
 
-gameScreen().startScreen()
+gameScreen().run()

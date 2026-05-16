@@ -9,7 +9,6 @@ class dumbPiece(pygame.sprite.Sprite):
         self.coords = ""
         self.color = aPlayer.getColor()
         self.player = aPlayer
-        self.myGame = aPlayer.myGame
         self.image = False
         self.move(anX, aY)
 
@@ -22,6 +21,8 @@ class dumbPiece(pygame.sprite.Sprite):
         self.coords = (100 + (75*anX), 50 + (75*(7-aY)))
         self.rect = self.image.get_rect(topleft = self.coords)
 
+    def collidepoint(self, aPos):
+        self.rect.collidepoint(aPos)
         
        
 
@@ -51,14 +52,15 @@ class piece(dumbPiece):
         
         
         self.hasMoved = False
-        aTile = self.myGame.getTile(anX, aY)
-        self.tile = aTile
-        aTile.setPiece(self)
+        
+        
+        
         self.move(anX, aY)
 
     def move(self, anX, aY):
         super().move(anX, aY)
-        self.tile = self.myGame.getTile(anX, aY)
+        self.tile = self.getTile(anX, aY)
+        self.tile.setPiece(self)
 
     def setPos(self, aPos):
         self.coords = (aPos[0], aPos[1])
@@ -68,9 +70,12 @@ class piece(dumbPiece):
         self.kill()
         self.player.removePiece(self)
         self.tile.empty()
-
-    def getTile(self):
-        return self.tile
+    
+    def op(self):
+        return self.player.op
+    
+    def getTile(self, anX, aY):
+        return self.player.getTile(anX, aY)
     
     def cCanMove(self, anX, aY):
         oldX = self.x
@@ -86,14 +91,14 @@ class piece(dumbPiece):
         oldTile.empty()
         
         
-        self.myGame.getNonActivePlayer().removePiece(oldPiece)
+        self.op().removePiece(oldPiece)
         
         newTile.setPiece(self)
         self.setCoords(anX, aY)
-        if self.myGame.inCheck(self.color):
+        if self.op().isChecking():
             anArray = False
         oldTile.setPiece(self)
-        self.myGame.getNonActivePlayer().addPiece(oldPiece)
+        self.op().addPiece(oldPiece)
         newTile.setPiece(oldPiece)
         self.setCoords(oldX, oldY)
         return anArray
@@ -123,7 +128,7 @@ class dumbKnight(dumbPiece):
 class knight(piece):
 
     def canMove(self, anX, aY):
-        destTile = self.myGame.getTile(anX, aY)
+        destTile = self.getTile(anX, aY)
         if not destTile.isEmpty() and destTile.getPlayer() == self.player:
             return False
         for tile in self.tile.rookNeighbors:
@@ -147,7 +152,7 @@ class dumbRook(dumbPiece):
 class rook(piece):
 
     def canMove(self, anX, aY):
-        destTile = self.myGame.getTile(anX, aY)
+        destTile = self.getTile(anX, aY)
         if not destTile.isEmpty() and destTile.getPlayer() == self.player:
             return False
         for i in range(8):
@@ -183,14 +188,14 @@ class pawn(piece):
     
     def canMove(self, col, row):
         magicNum = 4
-        if self.player == self.myGame.player1:
+        if self.player.isPlayer1():
             magicNum = 0
-        destTile = self.myGame.getTile(col, row)
-        myTile = self.getTile()
+        destTile = self.getTile(col, row)
+        myTile = self.tile
         front = myTile.getNeighbor(2+magicNum)
         if destTile == myTile.getNeighbor(1+magicNum) or destTile == myTile.getNeighbor(3+magicNum):
             
-            if self.myGame.enPassantTile == destTile:
+            if self.player.enPassantTile == destTile:
                 return default(destTile)
             
             if destTile.isEmpty() or destTile.getPlayer() == self.player:
@@ -218,15 +223,15 @@ class pawn(piece):
             return False
         if not aTile.isEmpty() and aTile.getPlayer() != self.player:
             return True
-        if aTile == self.myGame.enPassantTile:
+        if aTile == self.player.enPassantTile:
             return True
         return False
     
     def findMoves(self):
         magicNum = 4
-        if self.player == self.myGame.player1:
+        if self.player.isPlayer1():
             magicNum = 0
-        myTile = self.getTile()
+        myTile = self.tile
         front = myTile.getNeighbor(2+magicNum)
         diag1 = myTile.getNeighbor(1+magicNum)
         diag2 = myTile.getNeighbor(3+magicNum)
@@ -264,7 +269,7 @@ class bishop(piece):
         return "bishop"
 
     def canMove(self, anX, aY):
-        destTile = self.myGame.getTile(anX, aY)
+        destTile = self.getTile(anX, aY)
         if not destTile.isEmpty() and destTile.getPlayer() == self.player:
             return False
         for i in range(8):
@@ -299,7 +304,7 @@ class king(piece):
         return "king"
     
     def canMove(self, anX, aY, ):
-        destTile = self.myGame.getTile(anX, aY)
+        destTile = self.getTile(anX, aY)
         answer = default(destTile)
         if not destTile.isEmpty() and destTile.getPlayer() == self.player:
             answer = False
@@ -309,31 +314,31 @@ class king(piece):
         rightCastle = self.tile.getNeighbor(0).getNeighbor(0)
         leftCastle = self.tile.getNeighbor(4).getNeighbor(4)
         if not self.hasMoved and rightCastle == destTile:
-            if self.myGame.inCheck(self.color) or rightCastle.getNeighbor(0).hasMoved():
+            if self.op().isChecking() or rightCastle.getNeighbor(0).hasMoved():
                 return False
             if not rightCastle.getNeighbor(4).isEmpty() or not rightCastle.isEmpty():
                 return False
             self.setCoords(anX-1, aY)
-            if self.myGame.inCheck(self.color):
+            if self.op().isChecking():
                 self.setCoords(anX-2, aY)
                 return False
             self.setCoords(anX, aY)
-            if self.myGame.inCheck(self.color):
+            if self.op().isChecking():
                 self.setCoords(anX-2, aY)
                 return False
             self.setCoords(anX-2, aY)
             return [destTile, False, [7]]
         if not self.hasMoved and leftCastle == destTile:
-            if self.myGame.inCheck(self.color) or leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
+            if self.op().isChecking() or leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
                 return False
             if not leftCastle.getNeighbor(4).isEmpty() or not leftCastle.isEmpty() or not leftCastle.getNeighbor(0).isEmpty():
                 return False
             self.setCoords(anX+1, aY)
-            if self.myGame.inCheck(self.color):
+            if self.op().isChecking():
                 self.setCoords(anX+2, aY)
                 return False
             self.setCoords(anX, aY)
-            if self.myGame.inCheck(self.color):
+            if self.op().isChecking():
                 self.setCoords(anX+2, aY)
                 return False
             self.setCoords(anX+2, aY)
@@ -341,14 +346,14 @@ class king(piece):
         
     def findMoves(self):
         moves = []
-        myTile = self.getTile()
+        myTile = self.tile
         for i in range(8):
             tile = self.tile.getNeighbor(i)
             moves = self.checkValidity(tile, moves)
         rightCastle = self.tile.getNeighbor(0).getNeighbor(0)
         leftCastle = self.tile.getNeighbor(4).getNeighbor(4)
         
-        if not self.hasMoved and not self.myGame.inCheck(self.color):
+        if not self.hasMoved and not self.op().isChecking():
             if not rightCastle.getNeighbor(0).hasMoved():
                 
                 rCpos = rightCastle.getPos()
@@ -356,9 +361,9 @@ class king(piece):
                 aY = rCpos[1]
                 if rightCastle.isEmpty() and rightCastle.getNeighbor(4).isEmpty():
                     self.setCoords(anX-1, aY)
-                    if not self.myGame.inCheck(self.color):
+                    if not self.op().isChecking():
                         self.setCoords(anX, aY)
-                        if not self.myGame.inCheck(self.color):
+                        if not self.op().isChecking():
                             moves.append(rCpos)
                 
             if not leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
@@ -367,9 +372,9 @@ class king(piece):
                 aY = lCpos[1]
                 if leftCastle.isEmpty() and leftCastle.getNeighbor(0).isEmpty() and leftCastle.getNeighbor(4).isEmpty():
                     self.setCoords(anX+1, aY)
-                    if not self.myGame.inCheck(self.color):
+                    if not self.op().isChecking():
                         self.setCoords(anX, aY)
-                        if not self.myGame.inCheck(self.color):
+                        if not self.op().isChecking():
                             
                             moves.append(lCpos)
 
@@ -386,7 +391,7 @@ class queen(piece):
         return "queen"
     
     def canMove(self, anX, aY):
-        destTile = self.myGame.getTile(anX, aY)
+        destTile = self.getTile(anX, aY)
         if not destTile.isEmpty() and destTile.getPlayer() == self.player:
             return False
         for i in range(8):

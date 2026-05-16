@@ -1,5 +1,4 @@
 import math
-import time
 from pieces import *
 
 class player():
@@ -24,18 +23,19 @@ class player():
         for i in range(8):
             self.pieces.append(pawn(i, self.pawnsRow, self))
 
-        for piece in self.pieces:
-            self.myScreen.addSprite(piece)
-
-    def getCheckers(self, aKing):
+    def getTile(self, anX, aY):
+        return self.board.getTile(anX, aY)
+    
+    def getCheckers(self):
         checkers = []
+        aKing = self.op.king
         for item in self.pieces:
             if item.canMove(aKing.x, aKing.y):
                 checkers.append((item.x, item.y))
         return checkers
     
-    def isChecking(self, aKing):
-        checkers = self.getCheckers(aKing)
+    def isChecking(self):
+        checkers = self.getCheckers()
         return len(checkers) > 0
 
     def addPiece(self, aPiece):
@@ -45,38 +45,52 @@ class player():
     def removePiece(self, aPiece):
         if aPiece != "EMPTY":
             self.pieces.remove(aPiece)
-          
 
-    def __init__(self, player1, aGame):
+    def isPlayer1(self):
+        return self.player1
+
+    def __init__(self, player1, aBoard):
         self.king = "EMPTY"
+        self.board = aBoard
+        self.op = ""
+        self.enPassantTile = ""
         self.tempMoveString = ""
+        self.needsUpdate = True
+        self.humanSelection = ()
+        self.posibleMoves = ""
         self.pieces = []
-        self.myGame = aGame
-        self.myScreen = aGame.myScreen
+        self.player1 = player1
+        self.dragging = False
+        self.mouseDown = False
+        self.promotionNeeded = False
+        self.matchedBot = True
+        self.validPiece = False
+        self.originalMousePos = ""
+        self.validPieceOgPos = ""
+
         if player1:
             self.color = "white"
             self.row = 0
             self.pawnsRow = 1
+            self.oppositeRow = 7
             self.pname = "Player 1:  "
         else:
             self.color = "black"
             self.row = 7
             self.pawnsRow = 6
+            self.oppositeRow = 0
             self.pname = "Player 2:  "
 
     def hasPiece(self, col, row):
-        aPiece = self.myGame.board.getTile(col, row).getPiece()
+        for item in self.pieces:
+            if item.tile.getPos() == (col, row):
+                return True
+        return False
        
-        if aPiece == "EMPTY" or aPiece.getColor() != self.color:
-            return False
-        
-        return aPiece
     
     def getColor(self):
         return self.color
     
-    def updateScreen(self):
-        self.myScreen.updateScreen()
     
     def name(self):
         return self.pname
@@ -84,144 +98,162 @@ class player():
     
 class humanPlayer(player):
 
-    def checkSelection(self, validPiece, pos):
+    def isHuman(self):
+        return True
+    
+    def checkSelection(self, aTile, botString):
         thing = "abcdefgh"
-        if not validPiece: return False
-        for row in self.myGame.onScreenTiles():
-            for tile in row:
-                if tile.collidepoint(pos):
-                    col = tile.pos[0]
-                    row = tile.pos[1]
-                    if validPiece.cCanMove(col, row):
-                        
-                        startX = thing[validPiece.x]
-                        startY = str(validPiece.y+1)
-                        endX = thing[col]
-                        endY = str(row+1)
-                        promotion = " "
-                        if validPiece.name() == "pawn":
-                            if row == self.myGame.getNonActivePlayer().row:
-                                
-                                promotion = self.myScreen.drawPromotion()
-                        self.tempMoveString = startX + startY + endX + endY + promotion
-                        if self.tempMoveString != self.myGame.botString:
-                            self.myGame.drawBot()
-                            print("The bot thought about this move:  " + self.myGame.botString)
-                        else:
-                            self.myGame.botChoice = ""
-                            print("youre so smart")
-                        self.myGame.movesString += self.tempMoveString + " "
-                        if promotion == " ": anArray = validPiece.canMove(col, row)
-                        else: anArray = [None, False, False]
-                        self.myGame.movePiece(validPiece, col, row, anArray[1], anArray[2], promotion)
-                        return True
+        if not self.validPiece: return False
+        
+        self.good = False
+        self.ccol = aTile[0]
+        self.rrow = aTile[1]
+        if self.validPiece.cCanMove(self.ccol, self.rrow):
+            self.goodPiece = self.validPiece
+            self.good = True
+            self.startX = thing[self.validPiece.x]
+            self.startY = str(self.validPiece.y+1)
+            self.endX = thing[self.ccol]
+            self.endY = str(self.rrow+1)
+            self.promotion = " "
+            self.promotionNeeded = False
+            if self.validPiece.name() == "pawn":
+                if self.rrow == self.oppositeRow:
+                    self.promotionNeeded = True
+                    
+            if not self.promotionNeeded:
+                return self.finishSelection(botString)
         return False
+
+
+    def finishSelection(self, botString):
+       
+        self.tempMoveString = self.startX + self.startY + self.endX + self.endY + self.promotion
+        
+        if self.tempMoveString != botString:
+            self.matchedBot = False
+            print("The bot thought about this move:  " + botString)
+        else:
+            self.matchedBot = True
+            print("youre so smart")
+        
+        if self.promotion == " ": anArray = self.validPiece.canMove(self.ccol, self.rrow)
+        else: anArray = [None, False, False]
+        self.humanSelection = (self.goodPiece, self.ccol, self.rrow, anArray[1], anArray[2], self.promotion)
+        
+        return True
+       
     
     def drawPosibilities(self, validPiece):
-        self.myScreen.sur.fill((255, 255, 255))
-        self.myScreen.drawBoard()
-        moves = validPiece.findMoves()
-        self.myGame.drawSquares(moves, (255, 150, 0))
-        if self.myGame.checkers != "": self.myGame.drawSquares(self.myGame.checkers, (255, 0, 0))
-        self.myScreen.drawSprites()
 
-        pygame.display.update()
+        self.posibleMoves = validPiece.findMoves()
+        self.needsUpdate = True
+        
 
-    def findPosibilities(self, aPos):
+    def findPosibilities(self, aTile):
+   
         for piece in self.pieces:
-            if piece.rect.collidepoint(aPos):
+            
+            if piece.tile.getPos() == aTile:
+                
                 self.drawPosibilities(piece)
                 pygame.mouse.set_cursor(pygame.cursors.diamond)
                 return piece
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        self.posibleMoves = ""
+        self.needsUpdate = True
         return False
-    def takeTurn(self):
-        
-        self.myGame.getBotInput(10)
-        running = True
-        
-        validPiece = False
-        dragging = False
-        mouseDown = False
-        validPieceOgPos = ""
-        originalMousePos = ""
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                   
-                    return False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if not validPiece:
-                        for piece in self.pieces:
-                            if piece.rect.collidepoint(event.pos):
-                                validPiece = piece
-                                validPieceOgPos = (100 + piece.x * 75 + 75/2, 50 + (7-piece.y) * 75 + 75/2)
-                                dragging = False
-                                mouseDown = True
-                                originalMousePos = event.pos
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    wasClick = True
-                    if dragging:
-                        dragging = False
-                        wasClick = False
-                    else:
-                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                    
-                    mouseDown = False
-                    if not wasClick:
-                        if self.checkSelection(validPiece, event.pos):
-                            
-                            running = False
-                            
-                        if running:
-                            if validPiece: validPiece.setPos(validPieceOgPos)
-                            self.updateScreen()
-                            validPiece = False
-                    else:
-                        if validPiece and not validPiece.rect.collidepoint(event.pos):
-                            if self.checkSelection(validPiece, event.pos):
-                                running = False
-                                
-                            if running:
-                                self.updateScreen()
-                                validPiece = False
-                            
-                elif event.type == pygame.MOUSEMOTION:
-                    if mouseDown:
+    
+    def handleEvent(self, aEvent, aTile, botString):
+        done = False
+        if aEvent.type == pygame.MOUSEBUTTONDOWN:
+            
+            
+            if not self.validPiece:
+                for piece in self.pieces:
+                    if piece.tile.getPos() == aTile:
                         
-                        if compareTuple(event.pos, originalMousePos):
-
-                            dragging = True
+                        self.validPiece = piece
+                        self.validPieceOgPos = (100 + piece.x * 75 + 75/2, 50 + (7-piece.y)*75 + 75/2)
+                        self.dragging = False
+                        self.mouseDown = True
+                        self.originalMousePos = aEvent.pos
+        elif aEvent.type == pygame.MOUSEBUTTONUP:
+  
+            wasClick = True
+            if self.dragging:
+                self.dragging = False
+                wasClick = False
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+            self.mouseDown = False
+            self.originalMousePos = ""
+            
+            if not wasClick:
+                if not self.checkSelection(aTile, botString):
+                    if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                    self.needsUpdate = True
+                    self.validPiece = False
+                else:
+                    done = True
                     
-                    if not validPiece and not self.findPosibilities(event.pos):
-                        self.updateScreen()
-                    elif validPiece and dragging:
-                        validPiece.setPos(event.pos)
-                        self.drawPosibilities(validPiece)
-        return True
+            else:
+                if self.validPiece and self.validPiece.tile.getPos() != aTile:
+                    
+                    if not self.checkSelection(aTile, botString):
+                        if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                        self.needsUpdate = True
+                        self.validPiece = False
+
+                    else:
+                        
+                        done = True
+        elif aEvent.type == pygame.MOUSEMOTION:
+           
+            if self.mouseDown:
+                
+                
+                if compareTuple(aEvent.pos, self.originalMousePos):
+                    self.dragging = True
+            
+            if not self.validPiece and not self.findPosibilities(aTile):
+                if self.posibleMoves != "":
+                    self.posibleMoves = ""
+                    self.needsUpdate = True
+                
+                
+            elif self.validPiece and self.dragging:
+                self.validPiece.setPos(aEvent.pos)
+                self.needsUpdate = True
+                
+                
+        
+        return [True, done]
+
 def compareTuple(t1, t2):
     x = t1[0] - t2[0]
     y = t1[1] - t2[1]
     return math.sqrt(x * x + y * y) > 5
 
 class botPlayer(player):
-    def __init__(self, player1, difficulty, aGame):
-        super().__init__(player1, aGame)
+
+    def isHuman(self):
+        return False
+    
+    def __init__(self, player1, difficulty, aBoard):
+        super().__init__(player1, aBoard)
+        
         self.difficulty = difficulty
 
-    def takeTurn(self):
+    def takeTurn(self, botString):
         
-        botString = self.myGame.getBotInput(self.difficulty)
-
-        botString = self.myGame.botInput(botString)
         
-        self.myGame.drawBot()
         validPiece = self.hasPiece(botString[0], botString[1]) 
         col = botString[2]
         row = botString[3]
         anArray = validPiece.canMove(col, row)
-        print("Turn " + str(self.myGame.turns) + ": The bot choose:  " + self.myGame.botString)
-        self.myGame.movePiece(validPiece, col, row, anArray[1], anArray[2], botString[4])
-        time.sleep(0.25)
+        
+        self.botTuple = (validPiece, col, row, anArray[1], anArray[2], botString[4])
+        
+        
         return True

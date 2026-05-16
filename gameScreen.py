@@ -1,6 +1,6 @@
 from game import game
 from pieces import *
-
+import time
 pygame.init()
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -25,11 +25,18 @@ class button(pygame.Rect):
         self.myLambda = aLambda
         
 
-    def handleClick(self, aPos):
-        if self.collidepoint(aPos):
-            self.myLambda()
-            return True
-        return False
+    def handleEvent(self, aEvent):
+        handled = False
+        clicked = False
+        if aEvent.type == pygame.MOUSEMOTION:
+            if self.collidepoint(aEvent.pos):
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+                handled = True
+        elif aEvent.type == pygame.MOUSEBUTTONUP:
+            if self.collidepoint(aEvent.pos):
+                self.myLambda()
+                clicked =  True
+        return clicked, handled
         
 class cursor(pygame.sprite.Sprite):
     def __init__(self, anImage):
@@ -43,14 +50,23 @@ class cursor(pygame.sprite.Sprite):
 
 
 class gameScreen():
+
+    def gatherSprites(self):
+        for item in self.game.player1.pieces:
+            self.addSprite(item)
+        for item in self.game.player2.pieces:
+            self.addSprite(item)
+        
+
+
     def __init__(self):
         
         self.allsprites = pygame.sprite.Group()
         self.specialsprites = pygame.sprite.Group()
         self.superSpecialSprite = pygame.sprite.Group()
+        
         self.specialpieces = []
         self.specialCursor = ""
-        self.drawSpecialCursor = False
         self.tiles = []
         self.sur = ""
         self.game = ""
@@ -93,109 +109,180 @@ class gameScreen():
             letter = font.render(thing[i], True, black)
             self.sur.blit(letter, ((125 + i * 75), 60 + 8* 75))
 
+    def drawSpecialSquares(self, aThing, aColor):
+        superThing = getattr(self.game, aThing)
+        if superThing != "": self.drawSquares(superThing(), aColor)
+        
     def updateScreen(self):
-        self.sur.fill(white)
-        self.drawBoard()
-        if self.game.checkers != "": self.drawSquares(self.game.checkers, (255, 0, 0))
-        if self.game.botChoice != "": self.drawSquares(self.game.botChoice, (0, 100, 0))
-        
-        
-        self.drawSprites()
-        pygame.display.update()
+        if self.game.getNeedsUpdate():
+            
+            self.sur.fill(white)
+            self.drawBoard()
+            
+            self.drawSpecialSquares("ccheckers", (255, 0, 0))
+            self.drawSpecialSquares("bbotChoice", (0, 100, 0))
+            self.drawSpecialSquares("pposibleMoves", (255, 150, 0))
+            
+            self.drawSprites()
+            
+            pygame.display.update()
+            self.game.clearUpdateFlags()
 
     def drawPromotion(self):
-        
+        self.shouldDrawPromotion = True
         self.specialpieces.append(dumbQueen(9, 7, self.game.activePlayer))
         self.specialpieces.append(dumbRook(9, 5, self.game.activePlayer))
         self.specialpieces.append(dumbBishop(9, 3, self.game.activePlayer))
         self.specialpieces.append(dumbKnight(9, 1, self.game.activePlayer))
-        self.specialCursor = cursor("./white/pawn.png")
-        self.superSpecialSprite.add(self.specialCursor)
+        
 
         for item in self.specialpieces: self.specialsprites.add(item)
         
-        self.updateScreen()
-        running = True
-        while running:
-            selection = ""
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    for item in self.specialpieces:
-                        if item.rect.collidepoint(event.pos):
-                            match item.name():
-                                case "queen":
-                                    
-                                    selection = "q"
-                                case "rook":
-
-                                    selection = "r"
-                                case "knight":
-                                    selection = "n"
-                                case "bishop":
-                                    selection = "b"
-                            
-                            for item in self.specialsprites:
-                                item.kill()
-                            self.specialCursor.kill()
-                            self.drawSpecialCursor = False
-                            pygame.mouse.set_visible(True)
-                            return selection
-                elif event.type == pygame.MOUSEMOTION:
-                    set = False
-                    for item in self.specialpieces:
-                        if item.rect.collidepoint(event.pos):
-                            pygame.mouse.set_visible(False)
-                            self.specialCursor.move(event.pos)
-                            self.drawSpecialCursor = True
-                            self.updateScreen()
-                            set = True
-                if not set:
-                    self.specialCursor.move((-1000, -1000))
-                        
-                    self.drawSpecialCursor = False
-                    pygame.mouse.set_visible(True)
-                    self.updateScreen()
-                        
+        self.updateScreen() 
 
         
     def drawSprites(self):
         self.allsprites.draw(self.sur)
         self.specialsprites.draw(self.sur)
-        if self.drawSpecialCursor: self.superSpecialSprite.draw(self.sur)
+        if self.game.needsPromotion: self.superSpecialSprite.draw(self.sur)
+        
 
     def returnButton(self, aSurface, anX, aText, aLambda):
         return button((anX, 50, 200, 100), aText, aSurface, aLambda)
     
-    def startScreen(self):
+    def collidesSpecial(self, aPos):
+        for item in self.specialpieces:
+            if item.rect.collidepoint(aPos): return item
+        return False
+
+    def setUpStartScreen(self):
         start = pygame.display.set_mode((800, 400))
         start.fill((255, 0, 255))
        
-        buttons = []
-        buttons.append(self.returnButton(start, 50, "No Bots", lambda:self.game.startGame(False, 0, False, 0)))
-        buttons.append(self.returnButton(start, 350, "Bots", lambda:self.game.startGame(True, 5, True, 10)))
+        self.buttons = []
+        self.buttons.append(self.returnButton(start, 50, "No Bots", lambda: self.thing(lambda:self.game.startGame(False, 0, False, 0))))
+        self.buttons.append(self.returnButton(start, 350, "Bots", lambda: self.thing(lambda:self.game.startGame(True, 5, True, 10))))
         pygame.display.update()
-        running = True
-        self.game = game(self)
-        gameStarted = False
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    for butt in buttons:
-                        if butt.handleClick(event.pos):
-                            gameStarted = True
+
+    def startHandle(self, anEvent):
+        clicked = False
+        handled = False
+        for butt in self.buttons:
+            newclicked, newhandled = butt.handleEvent(anEvent)
+            if not clicked:
+                clicked = newclicked
+            if not handled:
+                handled = newhandled
+        if not handled:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        if clicked:
+            return True
+        return False
+    
+
+    def promotionHandle(self, anEvent):
+        if anEvent.type == pygame.MOUSEMOTION:
+            if self.collidesSpecial(anEvent.pos):
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        elif anEvent.type == pygame.MOUSEBUTTONUP:
+            item = self.collidesSpecial(anEvent.pos)
+            if item:
+                match item.name():
+                    case "queen":
+                    
+                        self.game.activePlayer.promotion = "q"
+                    case "rook":
+
+                        self.game.activePlayer.promotion = "r"
+                    case "knight":
+                        self.game.activePlayer.promotion = "n"
+                    case "bishop":
+                        self.game.activePlayer.promotion = "b"
+                for item in self.specialsprites:
+                    item.kill()
                 
+                self.game.activePlayer.promotionNeeded = False
+                self.game.activePlayer.finishSelection(self.game.botString)
+                
+                
+    def thing(self, aLambda):
+        self.makeMainScreen()
+        aLambda()
+        self.gatherSprites()
+        self.updateScreen()
+        
+    def run(self):
+        
+        self.setUpStartScreen()
+        running = True
+        self.game = game()
+        clock = pygame.time.Clock()
+        gameStarted = False
+        
+        while running:
+            
             if gameStarted:
-                if not self.game.gameStopped():
+                self.game.getBotInput(10)
+                
+            eventList = pygame.event.get()
+            if len(eventList) == 0:
+                if gameStarted and not self.game.gameStopped() and not self.game.activePlayerHuman():
                     if not self.game.step():
                         running = False
+            for event in eventList:
+                if event.type == pygame.QUIT:
+                    running = False
                 else:
-                    gameStarted = False
                     
+                    if not gameStarted:
+                        
+                       if self.startHandle(event):
+                           gameStarted = True     
+                            
+                        
+                    elif self.game.activePlayer.promotionNeeded:
+                        self.promotionHandle(event)
+
+                                
+                    else:
+                        self.game.drawCheck()
+                      
+                        if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEBUTTONUP or event.type == pygame.MOUSEMOTION:
+                            
+                            if not self.game.gameStopped():
+                                if self.game.activePlayerHuman():
+                                    
+                                    found = False
+                                    for row in self.tiles:
+                                        for tile in row:
+                                            
+                                            if tile.collidepoint(event.pos):
+                                                anArray = self.game.handleEvent(event, tile.pos, self.game.botString)
+                                                if not anArray[0]:
+                                                    running = False
+                                                if anArray[1]:
+                                                    self.game.moveHumanPiece()
+                                                    
+
+                                                found = True
+                                        
+                                    if not found:
+                                        self.game.handleEvent(event, False, self.game.botString)
+
+                                else:
+                                    self.game.botTurn()
+                                    self.updateScreen()
+                                    time.sleep(0.25)
+                            else:
+                                gameStarted = False
+                                running = False
+                    if gameStarted:
+                        self.updateScreen()
+                        self.game.drawCheck()
+                        clock.tick(60)
+                
 
     def makeMainScreen(self):
         self.sur = pygame.display.set_mode((1000, 900))
-

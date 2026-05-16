@@ -3,7 +3,7 @@ from board import board
 from players import *
 
 class game():
-    def __init__(self, aScreen):
+    def __init__(self):
         
         self.board = ""
         self.player1 = ""
@@ -12,24 +12,64 @@ class game():
         self.turns = 0
         self.movesString = ""
         self.botString = ""
+        self.winnerPrinted = False
         self.enPassantTile = ""
+        self.needsPromotion = False
         self.checkers = ""
-        self.myScreen = aScreen
         self.myBotHandler = botHandler()
         self.botChoice = ""
+        self.needsUpdate = True
         self.promotionSquares = ""
         
         self.botStarted = self.myBotHandler.startBot()
 
-    def onScreenTiles(self):
-        return self.myScreen.tiles
+    def activePlayerHuman(self):
+        return self.activePlayer.isHuman()
+    
+    def handleEvent(self, aEvent, aTile, botString):
+        
+        return self.activePlayer.handleEvent(aEvent, aTile, botString)
+    
+    def getNeedsUpdate(self):
+        if self.needsUpdate:
+            return True
+        if self.player1.needsUpdate:
+            return True
+        return self.player2.needsUpdate
+    
+    def clearUpdateFlags(self):
+
+        self.player1.needsUpdate = False
+        self.player2.needsUpdate = False
+
+    def moveHumanPiece(self):
+        self.movesString += self.activePlayer.tempMoveString + " "
+        aTuple = self.activePlayer.humanSelection
+        self.resetEventFlags()
+        self.movePiece(aTuple[0], aTuple[1], aTuple[2], aTuple[3], aTuple[4], aTuple[5])
+
     
     def getBotInput(self, aDifficulty):
         self.botString = self.myBotHandler.getBotInput(self.movesString, aDifficulty)[9:14]
         return self.botString
     
-    def drawSquares(self, aList, Color):
-        self.myScreen.drawSquares(aList, Color)
+    def resetEventFlags(self):
+        na = self.getNonActivePlayer()
+        na.validPiece = False
+        na.dragging = False
+        na.mouseDown = False
+        na.posibleMoves = ""
+
+    def ccheckers(self):
+        return self.checkers
+    
+    def pposibleMoves(self):
+        return self.activePlayer.posibleMoves
+    
+    def bbotChoice(self):
+        if self.activePlayer.matchedBot:
+            return ""
+        return self.botChoice
 
     def startGame(self, player1bot, player1dif, player2bot, player2dif):
         self.board = board()
@@ -38,57 +78,68 @@ class game():
         self.turns = 0
         self.movesString = ""
         self.botString = ""
-        self.myScreen.makeMainScreen()
+
         if not self.botStarted:
             print("Sorry bot is sleepy")
-            self.player1 = humanPlayer(True, self)
-            self.player2 = humanPlayer(False, self)
+            self.player1 = humanPlayer(True, self.board)
+            self.player2 = humanPlayer(False, self.board)
             
         
         else:
             if player1bot:
-                self.player1 = botPlayer(True, player1dif, self)
+                self.player1 = botPlayer(True, player1dif, self.board)
             else:
-                self.player1 = humanPlayer(True, self)
+                self.player1 = humanPlayer(True, self.board)
             if player2bot:
-                self.player2 = botPlayer(False, player2dif, self)
+                self.player2 = botPlayer(False, player2dif, self.board)
             else:
-                self.player2 = humanPlayer(False, self)
+                self.player2 = humanPlayer(False, self.board)
         self.player1.start()
         self.player2.start()
+        self.player1.op = self.player2
+        self.player2.op = self.player1
         self.activePlayer = self.player1
-        self.myScreen.updateScreen()
 
         
-    def step(self):
+    def botTurn(self):
+        botString = self.getBotInput(self.activePlayer.difficulty)
+
+        botString = self.botInput(botString)
+        
+        self.activePlayer.takeTurn(botString)
+        self.drawBot()
         self.drawCheck()
-        if not self.activePlayer.takeTurn():
-            return False
-        self.drawCheck()
+        t = self.activePlayer.botTuple
+        self.movePiece(t[0], t[1], t[2], t[3], t[4], t[5])
+        print("Turn " + str(self.turns) + ": The bot choose:  " + botString)
+        
         return True
 
     def drawBot(self):
-        anArray = self.parseThings(self.botString[0], self.botString[1], self.botString[2], self.botString[3])
+        anArray = self.getSpecialArray()
         squares = []
         squares.append((anArray[0], anArray[1]))
         squares.append((anArray[2], anArray[3]))
         
         self.botChoice = squares
+        self.needsUpdate = True
         
 
     
 
     def drawCheck(self):
-        if self.inCheck(self.activePlayer.getColor()):
+        if self.inCheck():
             daKing = self.activePlayer.king
-            self.checkers = self.getNonActivePlayer().getCheckers(daKing)
+            self.checkers = self.getNonActivePlayer().getCheckers()
             
             self.checkers.append((daKing.x, daKing.y))
             
-            self.myScreen.updateScreen()
+            self.needsUpdate = True
             
         else:
-            self.checkers = ""
+            if self.checkers != "":
+                self.checkers = ""
+                self.needsUpdate = True
                 
     def hasPiece(self, col, row):
         return self.activePlayer.hasPiece(col, row)
@@ -99,7 +150,7 @@ class game():
             return True
         if self.activePlayer.hasMove():
             return False
-        if self.inCheck(self.color()):
+        if self.inCheck():
             self.winner()
         else:
             print("The game was a stalemate")
@@ -112,16 +163,19 @@ class game():
         newCol = ord(c) - ord('a')
         return [col, row, newCol, newRow]
     
+    def getSpecialArray(self):
+        return self.parseThings(self.botString[0], self.botString[1], self.botString[2], self.botString[3])
+    
     def botInput(self, aString):
         promote = False
         if len(aString) > 4:
             promote = aString[4]
-        array = self.parseThings(aString[0], aString[1], aString[2], aString[3])
+        
         
         
         self.movesString += aString + " "
         self.botString = aString
-        
+        array = self.getSpecialArray()
         array.append(promote)
         return array
 
@@ -134,13 +188,13 @@ class game():
         return self.activePlayer == self.player1
     
     def winner(self):
-        print(self.getNonActivePlayer().name() + "won!")
+        if not self.winnerPrinted:
+            print(self.getNonActivePlayer().name() + "won!")
+            self.winnerPrinted = True
 
-    def inCheck(self, aColor):
-        if aColor == self.player1.color:
-            return self.player2.isChecking(self.player1.king)
+    def inCheck(self):
+        return self.getNonActivePlayer().isChecking()
         
-        return self.player1.isChecking(self.player2.king)
     
     def color(self):
         return self.activePlayer.getColor()
@@ -154,7 +208,9 @@ class game():
 
     def activePlayerPrompt(self, aString):
         return self.activePlayer.name() + aString
-    
+
+  
+
     def getTile(self, x, y):
         return self.board.getTile(x, y)
 
@@ -176,7 +232,6 @@ class game():
                     case "b":
                         aPiece = bishop(-2, -2, self.activePlayer)
                 self.activePlayer.addPiece(aPiece)
-                self.myScreen.addSprite(aPiece)
 
         
         if eatenPiece != "EMPTY":
@@ -188,8 +243,12 @@ class game():
             destTile.getNeighbor(2+magicNum).piece.remove()
         if enPassantTile:
             self.enPassantTile = enPassantTile
+            self.player1.enPassantTile = enPassantTile
+            self.player2.enPassantTile = enPassantTile
         else:
             self.enPassantTile = ""
+            self.player1.enPassantTile = ""
+            self.player2.enPassantTile = ""
         if castle:
             magicNum = 0
             if castle[0] == 7:
@@ -202,4 +261,5 @@ class game():
         aPiece.setHasMoved(True)
         aPiece.move(col, row)
         self.switchPlayer()
-        self.myScreen.updateScreen()
+        
+        self.needsUpdate = True
