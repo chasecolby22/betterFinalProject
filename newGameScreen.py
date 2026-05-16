@@ -114,7 +114,7 @@ class gameScreen():
         
     def updateScreen(self):
         if self.game.getNeedsUpdate():
-            
+            self.game.updateKingTiles()
             self.sur.fill(white)
             self.drawBoard()
             

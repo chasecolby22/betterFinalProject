@@ -73,6 +73,16 @@ class game(board):
         if self.getNonActivePlayer().matchedBot:
             return ""
         return self.botChoice
+    
+    def updateKingTiles(self):
+        self.assignKingTile(self.player1)
+        self.assignKingTile(self.player2)
+    
+    def assignKingTile(self, aPlayer):
+        if aPlayer.needsKingTile:
+            dk = aPlayer.king
+            aPlayer.kingTile = self.getTile(dk.x, dk.y)
+            aPlayer.needsKingTile = False
 
     def startGame(self, player1bot, player1dif, player2bot, player2dif):
         
@@ -101,6 +111,7 @@ class game(board):
         self.player2.start()
         self.player1.op = self.player2
         self.player2.op = self.player1
+        self.updateKingTiles()
         self.activePlayer = self.player1
 
         
@@ -135,7 +146,7 @@ class game(board):
 
             if self.inCheck():
                 daKing = self.activePlayer.king
-                tempChecker =  self.getNonActivePlayer().getCheckers()
+                tempChecker =  self.nonActiveCheckers()
                 
                 tempChecker.append((daKing.x, daKing.y))
                 
@@ -148,7 +159,22 @@ class game(board):
                     self.checkers = ""
                     self.needsUpdate = True
             self.knowsCheck = True
-                
+
+    def grabPlayerTiles(self, aPlayer):
+        tiles = []
+        for item in aPlayer.pieces:
+            tiles.append(self.getTile(item.x, item.y))
+        return tiles
+    
+    def nonActiveCheckers(self):
+        dp = self.getNonActivePlayer()
+        return dp.getCheckers(self.grabPlayerTiles(dp))
+
+    def activePlayerHasMove(self):
+        dp = self.activePlayer
+        return dp.hasMove(self.grabPlayerTiles(dp))
+
+
     def hasPiece(self, col, row):
         return self.activePlayer.hasPiece(col, row)
     
@@ -156,7 +182,7 @@ class game(board):
         if len(self.player1.pieces) == 1 and len(self.player2.pieces) == 1:
             print("The game was a stalemate")
             return True
-        if self.activePlayer.hasMove():
+        if self.activePlayerHasMove():
             return False
         if self.inCheck():
             self.winner()
