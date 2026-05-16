@@ -205,6 +205,8 @@ class gameScreen():
                 
                 self.game.activePlayer.promotionNeeded = False
                 self.game.activePlayer.finishSelection(self.game.botString)
+                self.game.moveHumanPiece()
+                self.addSprite(self.game.newPiece)
                 
                 
     def thing(self, aLambda):
@@ -229,8 +231,9 @@ class gameScreen():
             eventList = pygame.event.get()
             if len(eventList) == 0:
                 if gameStarted and not self.game.gameStopped() and not self.game.activePlayerHuman():
-                    if not self.game.step():
-                        running = False
+                    self.game.botTurn()
+                    self.updateScreen()
+                    time.sleep(0.25)
             for event in eventList:
                 if event.type == pygame.QUIT:
                     running = False
@@ -243,13 +246,14 @@ class gameScreen():
                             
                         
                     elif self.game.activePlayer.promotionNeeded:
+                        self.drawPromotion()
                         self.promotionHandle(event)
 
                                 
                     else:
                         self.game.drawCheck()
                       
-                        if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEBUTTONUP or event.type == pygame.MOUSEMOTION:
+                        if isMouseEvent(event):
                             
                             if not self.game.gameStopped():
                                 if self.game.activePlayerHuman():
@@ -262,7 +266,9 @@ class gameScreen():
                                                 anArray = self.game.handleEvent(event, tile.pos, self.game.botString)
                                                 if not anArray[0]:
                                                     running = False
-                                                if anArray[1]:
+                                                
+                                                    
+                                                if not anArray[2] and anArray[1]:
                                                     self.game.moveHumanPiece()
                                                     
 
@@ -286,3 +292,6 @@ class gameScreen():
 
     def makeMainScreen(self):
         self.sur = pygame.display.set_mode((1000, 900))
+
+def isMouseEvent(aEvent):
+    return aEvent.type == pygame.MOUSEBUTTONDOWN or aEvent.type == pygame.MOUSEBUTTONUP or aEvent.type == pygame.MOUSEMOTION

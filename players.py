@@ -103,8 +103,8 @@ class humanPlayer(player):
     
     def checkSelection(self, aTile, botString):
         thing = "abcdefgh"
-        if not self.validPiece: return False
-        
+        if not self.validPiece: return [False, False]
+        if not aTile: return [False, False]
         self.good = False
         self.ccol = aTile[0]
         self.rrow = aTile[1]
@@ -120,10 +120,11 @@ class humanPlayer(player):
             if self.validPiece.name() == "pawn":
                 if self.rrow == self.oppositeRow:
                     self.promotionNeeded = True
+                    return [False, True]
                     
             if not self.promotionNeeded:
                 return self.finishSelection(botString)
-        return False
+        return [False, False]
 
 
     def finishSelection(self, botString):
@@ -141,7 +142,7 @@ class humanPlayer(player):
         else: anArray = [None, False, False]
         self.humanSelection = (self.goodPiece, self.ccol, self.rrow, anArray[1], anArray[2], self.promotion)
         
-        return True
+        return [True, False]
        
     
     def drawPosibilities(self, validPiece):
@@ -166,6 +167,7 @@ class humanPlayer(player):
     
     def handleEvent(self, aEvent, aTile, botString):
         done = False
+        thePromotion = False
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
             
             
@@ -190,7 +192,7 @@ class humanPlayer(player):
             self.originalMousePos = ""
             
             if not wasClick:
-                if not self.checkSelection(aTile, botString):
+                if not self.checkSelection(aTile, botString)[0]:
                     if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                     self.needsUpdate = True
                     self.validPiece = False
@@ -199,9 +201,10 @@ class humanPlayer(player):
                     
             else:
                 if self.validPiece and self.validPiece.tile.getPos() != aTile:
-                    
-                    if not self.checkSelection(aTile, botString):
-                        if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                    array = self.checkSelection(aTile, botString)
+                    if not array[0]:
+                        if array[1]: thePromotion = True
+                        elif self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
                         self.validPiece = False
 
@@ -228,7 +231,7 @@ class humanPlayer(player):
                 
                 
         
-        return [True, done]
+        return [True, done, thePromotion]
 
 def compareTuple(t1, t2):
     x = t1[0] - t2[0]

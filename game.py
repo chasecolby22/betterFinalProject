@@ -14,6 +14,7 @@ class game():
         self.botString = ""
         self.winnerPrinted = False
         self.enPassantTile = ""
+        self.newPiece = ""
         self.needsPromotion = False
         self.checkers = ""
         self.myBotHandler = botHandler()
@@ -67,7 +68,8 @@ class game():
         return self.activePlayer.posibleMoves
     
     def bbotChoice(self):
-        if self.activePlayer.matchedBot:
+        print("hi")
+        if self.getNonActivePlayer().matchedBot:
             return ""
         return self.botChoice
 
@@ -219,19 +221,20 @@ class game():
         destTile = self.getTile(col, row)
         eatenPiece = destTile.piece
         
-        if aPiece.name() == "pawn":
-            if row == self.getNonActivePlayer().row:
-                aPiece.remove()
-                match promotion:
-                    case "q":
-                        aPiece = queen(-2, -2, self.activePlayer)
-                    case "n":
-                        aPiece = knight(-2, -2, self.activePlayer)
-                    case "r":
-                        aPiece = rook(-2, -2, self.activePlayer)
-                    case "b":
-                        aPiece = bishop(-2, -2, self.activePlayer)
-                self.activePlayer.addPiece(aPiece)
+        if promotion != " ":
+       
+            aPiece.remove()
+            match promotion:
+                case "q":
+                    aPiece = queen(-2, -2, self.activePlayer)
+                case "n":
+                    aPiece = knight(-2, -2, self.activePlayer)
+                case "r":
+                    aPiece = rook(-2, -2, self.activePlayer)
+                case "b":
+                    aPiece = bishop(-2, -2, self.activePlayer)
+            self.activePlayer.addPiece(aPiece)
+            self.newPiece = aPiece
 
         
         if eatenPiece != "EMPTY":

@@ -78,6 +78,7 @@ class piece(dumbPiece):
         return self.player.getTile(anX, aY)
     
     def cCanMove(self, anX, aY):
+        
         oldX = self.x
         oldY = self.y
         if anX == oldX and oldY == aY:
