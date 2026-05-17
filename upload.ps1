@@ -1,8 +1,8 @@
 
 
 mv ./stockfish ../
-rm -rf ./.venv 
-rm -rf ./__pycache__ 
+rm ./.venv -r
+rm  ./__pycache__ -r
 git add .
 
 
