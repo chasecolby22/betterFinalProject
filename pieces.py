@@ -18,13 +18,16 @@ class dumbPiece(pygame.sprite.Sprite):
     
     def move(self, anX, aY):
         if not self.image:
-            anImage = "./" + self.color + "/" + self.name() + ".png"
-            self.image = pygame.image.load(anImage).convert_alpha()
+            self.changeImage()
         self.x = anX
         self.y = aY
         self.coords = (100 + (75*anX), 50 + (75*(7-aY)))
         self.rect = self.image.get_rect(topleft = self.coords)
 
+    def changeImage(self):
+        anImage = "./" + self.color + "/" + self.name() + ".png"
+        self.image = pygame.image.load(anImage).convert_alpha()
+        
     def collidepoint(self, aPos):
         self.rect.collidepoint(aPos)
         

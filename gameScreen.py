@@ -200,25 +200,14 @@ class gameScreen():
         elif anEvent.type == pygame.MOUSEBUTTONUP:
             item = self.collidesSpecial(anEvent.pos)
             if item:
-                match item.name():
-                    case "queen":
-                    
-                        self.game.activePlayer.promotion = "q"
-                    case "rook":
-
-                        self.game.activePlayer.promotion = "r"
-                    case "knight":
-                        self.game.activePlayer.promotion = "n"
-                    case "bishop":
-                        self.game.activePlayer.promotion = "b"
+                self.game.setPromotion(item.name())
                 for item in self.specialsprites:
                     item.kill()
-                
-                self.game.activePlayer.promotionNeeded = False
-                self.game.finishSelection()
-                
                 self.specialpieces = []
-                self.addSprite(self.game.newPiece)
+                
+                
+                
+                
                 
                 
     def thing(self, aLambda):

@@ -52,6 +52,9 @@ class player():
     def isPlayer2(self):
         return not self.player1
    
+    def setPromotion(self, a):
+        self.promotion = a
+        self.promotionNeeded = False
 
     def __init__(self, player1, aBoard):
         self.king = "EMPTY"
@@ -70,6 +73,7 @@ class player():
         self.player1 = player1
         self.dragging = False
         self.mouseDown = False
+        self.promotion = ""
         self.promotionNeeded = False
         self.matchedBot = True
         self.validPiece = False
@@ -140,8 +144,9 @@ class humanPlayer(player):
 
 
     def finishSelection(self, botString, op):
-       
-        self.tempMoveString = self.startX + self.startY + self.endX + self.endY + self.promotion
+        val = self.promotion
+        if type(val) != str: val = self.promotion.pro()
+        self.tempMoveString = self.startX + self.startY + self.endX + self.endY + val
        
         if self.tempMoveString[:4] != botString[:4]:
             self.matchedBot = False

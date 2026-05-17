@@ -58,15 +58,16 @@ class chess(game):
         self.botString = ""
         self.knowsCheck = False
         self.enPassantTile = ""
-        self.newPiece = ""
         
         self.checkers = ""
         self.myBotHandler = botHandler()
         self.botChoice = ""
-        self.promotionSquares = ""
         self.botStarted = self.myBotHandler.startBot()
 
-    
+    def setPromotion(self, a):
+        self.activePlayer.setPromotion(a)
+        self.finishSelection()
+
     def activePlayerHuman(self):
         return self.activePlayer.isHuman()
     
@@ -314,7 +315,7 @@ class chess(game):
         eatenPiece = destTile.piece
         
         if promotion != " ":
-       
+            '''
             aPiece.remove(startTile)
             match promotion:
                 case "q":
@@ -328,7 +329,19 @@ class chess(game):
             self.activePlayer.addPiece(aPiece)
             aPiece.setOp(self.getNonActivePlayer())
             self.newPiece = aPiece
-
+            '''
+            thing = ""
+            match promotion:
+                case "queen":
+                    thing = queen
+                case "knight":
+                    thing = knight
+                case "rook":
+                    thing = rook
+                case "bishop":
+                    thing = bishop
+            aPiece.__class__ = thing
+            aPiece.changeImage()
         
         if eatenPiece != "EMPTY":
             eatenPiece.remove(destTile)
