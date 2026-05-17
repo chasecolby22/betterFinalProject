@@ -1,8 +1,8 @@
 from botHandler import botHandler
 from board import board
 from players import *
-
 class game(board):
+
     def __init__(self):
         super().__init__()
         self.player1 = ""
@@ -10,28 +10,26 @@ class game(board):
         self.activePlayer = ""
         self.turns = 0
         self.movesString = ""
-        self.botString = ""
         self.winnerPrinted = False
-        self.knowsCheck = False
-        
-        self.enPassantTile = ""
-        self.newPiece = ""
-        self.needsPromotion = False
-        self.checkers = ""
-        self.myBotHandler = botHandler()
-        self.botChoice = ""
         self.needsUpdate = True
-        self.promotionSquares = ""
-        
-        self.botStarted = self.myBotHandler.startBot()
 
-    def activePlayerHuman(self):
-        return self.activePlayer.isHuman()
-    
-    def handleEvent(self, aEvent, aTile, botString):
-        
-        return self.activePlayer.handleEvent(aEvent, aTile, botString)
-    
+    def getNonActivePlayer(self):
+        if self.p1act():
+            return self.player2
+        return self.player1
+
+    def runBoth(self, aLambda):
+        aLambda(self.player1)
+        aLambda(self.player2)
+
+    def attachPieces(self, aPlayer):
+        for item in aPlayer.pieces:
+            pos = item.getPos()
+            self.getTile(pos[0], pos[1]).piece = item
+
+    def attachAll(self):
+        self.runBoth(lambda a: self.attachPieces(a))
+
     def getNeedsUpdate(self):
         if self.needsUpdate:
             return True
@@ -40,17 +38,53 @@ class game(board):
         return self.player2.needsUpdate
     
     def clearUpdateFlags(self):
-
+       
+        self.needsUpdate = False
+           
         self.player1.needsUpdate = False
         self.player2.needsUpdate = False
 
-    def moveHumanPiece(self):
-        self.movesString += self.activePlayer.tempMoveString + " "
-        aTuple = self.activePlayer.humanSelection
-        self.resetEventFlags()
-        self.movePiece(aTuple[0], aTuple[1], aTuple[2], aTuple[3], aTuple[4], aTuple[5])
+    def eatPieces(self, aPlayer):
+        for piece in aPlayer.pieces:
+            if piece.needsRemoved:
+                aPlayer.removePiece(piece)
+
+
+
+class chess(game):
+    def __init__(self):
+        super().__init__()
+        
+        self.botString = ""
+        self.knowsCheck = False
+        self.enPassantTile = ""
+        self.newPiece = ""
+        
+        self.checkers = ""
+        self.myBotHandler = botHandler()
+        self.botChoice = ""
+        self.promotionSquares = ""
+        self.botStarted = self.myBotHandler.startBot()
 
     
+    def activePlayerHuman(self):
+        return self.activePlayer.isHuman()
+    
+   
+
+    def handleEvent(self, aEvent, aTile):
+        theTile = False
+        if aTile: theTile = self.getTile(aTile[0], aTile[1])
+        return self.activePlayer.handleEvent(aEvent, theTile, self.botString, self.grabPlayerTiles(self.getNonActivePlayer()))
+    
+    
+    def moveHumanPiece(self):
+        self.movesString += self.activePlayer.tempMoveString + " "
+        self.moveThePiece()
+        
+        self.resetEventFlags()
+        
+
     def getBotInput(self, aDifficulty):
         self.botString = self.myBotHandler.getBotInput(self.movesString, aDifficulty)[9:14]
         return self.botString
@@ -61,6 +95,8 @@ class game(board):
         na.dragging = False
         na.mouseDown = False
         na.posibleMoves = ""
+        na.validPieceOgPos = ""
+        na.validPieceTile = ""
 
     def ccheckers(self):
         return self.checkers
@@ -70,9 +106,28 @@ class game(board):
     
     def bbotChoice(self):
         
-        if self.getNonActivePlayer().matchedBot:
-            return ""
         return self.botChoice
+    
+    def updateKingTiles(self):
+        self.runBoth(lambda a: self.assignKingTile(a))
+        
+    
+    def assignKingTile(self, aPlayer):
+        if aPlayer.needsKingTile:
+            dk = aPlayer.king
+            aPlayer.kingTile = self.getTile(dk.x, dk.y)
+            aPlayer.needsKingTile = False
+
+    def attachOpponent(self, aPlayer):
+        value = self.player1
+        if aPlayer == value:
+            value = self.player2
+        for piece in aPlayer.pieces:
+            piece.setOp(value)
+
+    def attachOp(self):
+        self.runBoth(lambda a: self.attachOpponent(a))
+       
 
     def startGame(self, player1bot, player1dif, player2bot, player2dif):
         
@@ -99,33 +154,48 @@ class game(board):
                 self.player2 = humanPlayer(False, self)
         self.player1.start()
         self.player2.start()
-        self.player1.op = self.player2
-        self.player2.op = self.player1
+        self.updateKingTiles()
+        self.attachAll()
+        self.attachOp()
         self.activePlayer = self.player1
 
-        
+    def finishSelection(self):
+        self.activePlayer.finishSelection(self.botString, self.grabPlayerTiles(self.getNonActivePlayer()))
+        self.moveHumanPiece()
+
+    def moveThePiece(self):
+        t = self.activePlayer.tuple
+        self.movePiece(t[0], t[1], t[2], t[3], t[4], t[5], t[6])
+    
     def botTurn(self):
         botString = self.getBotInput(self.activePlayer.difficulty)
 
-        botString = self.botInput(botString)
+        botThing = self.botInput(botString)
         
-        self.activePlayer.takeTurn(botString)
+        self.activePlayer.takeTurn(botThing, self.getTiles(), self.grabPlayerTiles(self.getNonActivePlayer()))
+        
+        self.moveThePiece()
         self.drawBot()
         self.drawCheck()
-        t = self.activePlayer.botTuple
-        self.movePiece(t[0], t[1], t[2], t[3], t[4], t[5])
+        self.needsUpdate = True
         print("Turn " + str(self.turns) + ": The bot choose:  " + botString)
         
         return True
 
     def drawBot(self):
-        anArray = self.getSpecialArray()
-        squares = []
-        squares.append((anArray[0], anArray[1]))
-        squares.append((anArray[2], anArray[3]))
         
-        self.botChoice = squares
-        self.needsUpdate = True
+        if not self.getNonActivePlayer().didMatchBot():
+            
+            anArray = self.getSpecialArray()
+            squares = []
+            squares.append((anArray[0], anArray[1]))
+            squares.append((anArray[2], anArray[3]))
+            
+            self.botChoice = squares
+            
+        else:
+            
+            self.botChoice = ""
         
 
     
@@ -135,7 +205,7 @@ class game(board):
 
             if self.inCheck():
                 daKing = self.activePlayer.king
-                tempChecker =  self.getNonActivePlayer().getCheckers()
+                tempChecker =  self.nonActiveCheckers()
                 
                 tempChecker.append((daKing.x, daKing.y))
                 
@@ -148,20 +218,36 @@ class game(board):
                     self.checkers = ""
                     self.needsUpdate = True
             self.knowsCheck = True
-                
-    def hasPiece(self, col, row):
-        return self.activePlayer.hasPiece(col, row)
+        
+
+    def grabPlayerTiles(self, aPlayer):
+        tiles = []
+        for item in aPlayer.pieces:
+            tiles.append(self.getTile(item.x, item.y))
+        return tiles
+    
+    def nonActiveCheckers(self):
+        dp = self.getNonActivePlayer()
+        return dp.getCheckers(self.grabPlayerTiles(dp), self.activePlayer.kingTile)
+
+    def activePlayerHasMove(self):
+        dp = self.activePlayer
+        return dp.hasMove(self.grabPlayerTiles(dp), self.grabPlayerTiles(self.getNonActivePlayer()))
     
     def gameStopped(self):
         if len(self.player1.pieces) == 1 and len(self.player2.pieces) == 1:
-            print("The game was a stalemate")
+            if not self.winnerPrinted:
+                print("The game was a stalemate")
+                self.winnerPrinted = True
             return True
-        if self.activePlayer.hasMove():
+        if self.activePlayerHasMove():
             return False
         if self.inCheck():
             self.winner()
         else:
-            print("The game was a stalemate")
+            if not self.winnerPrinted:
+                print("The game was a stalemate")
+                self.winnerPrinted = True
         return True
     
     def parseThings(self, a, b, c, d):
@@ -171,8 +257,11 @@ class game(board):
         newCol = ord(c) - ord('a')
         return [col, row, newCol, newRow]
     
-    def getSpecialArray(self):
+    def getBotSpecialArray(self):
         return self.parseThings(self.botString[0], self.botString[1], self.botString[2], self.botString[3])
+    
+    def getSpecialArray(self):
+        return self.parseThings(self.oldBotString[0], self.oldBotString[1], self.oldBotString[2], self.oldBotString[3])
     
     def botInput(self, aString):
         promote = False
@@ -183,14 +272,11 @@ class game(board):
         
         self.movesString += aString + " "
         self.botString = aString
-        array = self.getSpecialArray()
+        array = self.getBotSpecialArray()
         array.append(promote)
         return array
 
-    def getNonActivePlayer(self):
-        if self.p1act():
-            return self.player2
-        return self.player1
+    
     
     def p1act(self):
         return self.activePlayer == self.player1
@@ -201,7 +287,7 @@ class game(board):
             self.winnerPrinted = True
 
     def inCheck(self):
-        return self.getNonActivePlayer().isChecking()
+        return self.getNonActivePlayer().isChecking(self.grabPlayerTiles(self.getNonActivePlayer()), self.activePlayer.kingTile)
         
     
     def color(self):
@@ -217,36 +303,40 @@ class game(board):
     def activePlayerPrompt(self, aString):
         return self.activePlayer.name() + aString
 
+    def eatAllPieces(self):
+        self.eatPieces(self.player1)
+        self.eatPieces(self.player2)
   
 
-    def movePiece(self, aPiece, col, row, enPassantTile, castle, promotion):
+    def movePiece(self, aPiece, col, row, enPassantTile, castle, promotion, startTile):
         
         destTile = self.getTile(col, row)
         eatenPiece = destTile.piece
         
         if promotion != " ":
        
-            aPiece.remove()
+            aPiece.remove(startTile)
             match promotion:
                 case "q":
-                    aPiece = queen(-2, -2, self.activePlayer)
+                    aPiece = queen(-2, -2, self.activePlayer.getColor())
                 case "n":
-                    aPiece = knight(-2, -2, self.activePlayer)
+                    aPiece = knight(-2, -2, self.activePlayer.getColor())
                 case "r":
-                    aPiece = rook(-2, -2, self.activePlayer)
+                    aPiece = rook(-2, -2, self.activePlayer.getColor())
                 case "b":
-                    aPiece = bishop(-2, -2, self.activePlayer)
+                    aPiece = bishop(-2, -2, self.activePlayer.getColor())
             self.activePlayer.addPiece(aPiece)
+            aPiece.setOp(self.getNonActivePlayer())
             self.newPiece = aPiece
 
         
         if eatenPiece != "EMPTY":
-            eatenPiece.remove()
+            eatenPiece.remove(destTile)
         elif aPiece.name() == "pawn" and self.enPassantTile == destTile:
             magicNum = 0
             if self.p1act():
                 magicNum = 4
-            destTile.getNeighbor(2+magicNum).piece.remove()
+            destTile.getNeighbor(2+magicNum).piece.remove(destTile)
         if enPassantTile:
             self.enPassantTile = enPassantTile
             self.player1.enPassantTile = enPassantTile
@@ -259,13 +349,17 @@ class game(board):
             magicNum = 0
             if castle[0] == 7:
                 magicNum = 2
-            self.movePiece(self.getTile(castle[0], self.activePlayer.row).getPiece(), 3+magicNum, self.activePlayer.row, False, False, False)
+            theTile = self.getTile(castle[0], self.activePlayer.row)
+            self.movePiece(theTile.getPiece(), 3+magicNum, self.activePlayer.row, False, False, " ", theTile)
             self.switchPlayer()
 
         destTile.setPiece(aPiece)
-        aPiece.tile.empty()
+        
+        startTile.empty()
         aPiece.setHasMoved(True)
         aPiece.move(col, row)
         self.switchPlayer()
-        
+        self.knowsCheck = False
+        self.eatAllPieces()
+        self.oldBotString = self.botString
         self.needsUpdate = True

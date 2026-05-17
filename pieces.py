@@ -2,16 +2,20 @@
 import pygame
 
 class dumbPiece(pygame.sprite.Sprite):
-    def __init__(self, anX, aY, aPlayer):
+    def __init__(self, anX, aY, aColor):
         super().__init__()
         self.x = anX
         self.y = aY
         self.coords = ""
-        self.color = aPlayer.getColor()
-        self.player = aPlayer
+        self.color = aColor
+        
+        
         self.image = False
         self.move(anX, aY)
 
+    def isKing(self):
+        return False
+    
     def move(self, anX, aY):
         if not self.image:
             anImage = "./" + self.color + "/" + self.name() + ".png"
@@ -37,6 +41,9 @@ class piece(dumbPiece):
     def getY(self):
         return self.y
     
+    def getPos(self):
+        return (self.x, self.y)
+    
     def getHasMoved(self):
         return self.hasMoved
     
@@ -52,43 +59,40 @@ class piece(dumbPiece):
         
         
         self.hasMoved = False
-        
-        
+        self.needsRemoved = False
+        self.opponent = ""
         
         self.move(anX, aY)
 
-    def move(self, anX, aY):
-        super().move(anX, aY)
-        self.tile = self.getTile(anX, aY)
-        self.tile.setPiece(self)
+    def setOp(self, a):
+        self.opponent = a
 
+    def op(self):
+        return self.opponent
+    
     def setPos(self, aPos):
         self.coords = (aPos[0], aPos[1])
         self.rect = self.image.get_rect(center = self.coords)
     
-    def remove(self):
+    def remove(self, aTile):
         self.kill()
-        self.player.removePiece(self)
-        self.tile.empty()
+        self.needsRemoved = True
+        aTile.empty()
     
-    def op(self):
-        return self.player.op
-    
-    def getTile(self, anX, aY):
-        return self.player.getTile(anX, aY)
-    
-    def cCanMove(self, anX, aY):
+    def cCanMove(self, presentTile, futureTile, opListOfCheckers, kingTile):
         
         oldX = self.x
         oldY = self.y
+        anX = futureTile.x
+        aY = futureTile.y
         if anX == oldX and oldY == aY:
             return False
-        anArray = self.canMove(anX, aY)
+        anArray = self.canMove(presentTile, futureTile, opListOfCheckers)
         if not anArray:
             return False
         newTile = anArray[0]
         oldPiece = newTile.getPiece()
-        oldTile = self.tile
+        oldTile = presentTile
         oldTile.empty()
         
         
@@ -96,7 +100,7 @@ class piece(dumbPiece):
         
         newTile.setPiece(self)
         self.setCoords(anX, aY)
-        if self.op().isChecking():
+        if self.op().isChecking(opListOfCheckers, kingTile):
             anArray = False
         oldTile.setPiece(self)
         self.op().addPiece(oldPiece)
@@ -105,19 +109,20 @@ class piece(dumbPiece):
         return anArray
     
     def isValidMove(self, tile):
-        if not tile:
+        if not tile or tile.isNullTile():
             return False
-        if not tile.isNullTile() and (tile.isEmpty() or tile.getPlayer() != self.player):
+        
+        if tile.isEmpty() or tile.getColor() != self.color:
             return True
         return False
         
-    def isSuperValidMove(self, aPos):
-        return self.cCanMove(aPos[0], aPos[1])
+    def isSuperValidMove(self, fromTile, toTile, op, kingTile):
+        return self.cCanMove(fromTile, toTile, op, kingTile)
     
-    def checkValidity(self, aTile, moves):
+    def checkValidity(self, aTile, moves, fromTile, op, kingTile):
         if self.isValidMove(aTile):
             tPos = aTile.getPos()
-            if self.isSuperValidMove(tPos):
+            if self.isSuperValidMove(fromTile, aTile, op, kingTile):
                 moves.append(tPos)
         return moves
         
@@ -128,19 +133,19 @@ class dumbKnight(dumbPiece):
         
 class knight(piece):
 
-    def canMove(self, anX, aY):
-        destTile = self.getTile(anX, aY)
-        if not destTile.isEmpty() and destTile.getPlayer() == self.player:
+    def canMove(self, fromTile, destTile, _):
+        
+        if not destTile.isEmpty() and destTile.getColor() == self.color:
             return False
-        for tile in self.tile.rookNeighbors:
+        for tile in fromTile.rookNeighbors:
             if tile == destTile:
                 return default(destTile)
         return False
     
-    def findMoves(self):
+    def findMoves(self, fromTile, op, kingTile):
         moves = []
-        for tile in self.tile.rookNeighbors:
-            moves = self.checkValidity(tile, moves)
+        for tile in fromTile.rookNeighbors:
+            moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
         return moves
     
     def name(self):
@@ -152,28 +157,28 @@ class dumbRook(dumbPiece):
     
 class rook(piece):
 
-    def canMove(self, anX, aY):
-        destTile = self.getTile(anX, aY)
-        if not destTile.isEmpty() and destTile.getPlayer() == self.player:
+    def canMove(self, fromTile, destTile, _):
+        
+        if not destTile.isEmpty() and destTile.getColor() == self.color:
             return False
         for i in range(8):
             if i % 2 == 1:
                 continue
             else:
                 for j in range(8):
-                    if self.tile.getNeighbor(i).slide(i, j) == destTile:
+                    if fromTile.getNeighbor(i).slide(i, j) == destTile:
                         return default(destTile)
         return False 
     
-    def findMoves(self):
+    def findMoves(self, fromTile, op, kingTile):
         moves = []
         for i in range(8):
             if i % 2 == 1:
                 continue
             else:
                 for j in range(8):
-                    tile = self.tile.getNeighbor(i).slide(i, j)
-                    moves = self.checkValidity(tile, moves)
+                    tile = fromTile.getNeighbor(i).slide(i, j)
+                    moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
                     if not tile or not tile.isEmpty():
                         break
                    
@@ -187,19 +192,17 @@ class pawn(piece):
     def name(self):
         return "pawn"
     
-    def canMove(self, col, row):
+    def canMove(self, myTile, destTile, _):
         magicNum = 4
-        if self.player.isPlayer1():
+        if self.op().isPlayer2():
             magicNum = 0
-        destTile = self.getTile(col, row)
-        myTile = self.tile
         front = myTile.getNeighbor(2+magicNum)
         if destTile == myTile.getNeighbor(1+magicNum) or destTile == myTile.getNeighbor(3+magicNum):
             
-            if self.player.enPassantTile == destTile:
+            if self.op().enPassantTile == destTile:
                 return default(destTile)
             
-            if destTile.isEmpty() or destTile.getPlayer() == self.player:
+            if destTile.isEmpty() or destTile.getColor() == self.color:
                 
                 return False
             else:
@@ -222,17 +225,17 @@ class pawn(piece):
     def checkDiag(self, aTile):
         if aTile.isNullTile():
             return False
-        if not aTile.isEmpty() and aTile.getPlayer() != self.player:
+        if not aTile.isEmpty() and aTile.getColor() != self.color:
             return True
-        if aTile == self.player.enPassantTile:
+        if aTile == self.op().enPassantTile:
             return True
         return False
     
-    def findMoves(self):
+    def findMoves(self, myTile, op, kingTile):
+        
         magicNum = 4
-        if self.player.isPlayer1():
+        if self.op().isPlayer2():
             magicNum = 0
-        myTile = self.tile
         front = myTile.getNeighbor(2+magicNum)
         diag1 = myTile.getNeighbor(1+magicNum)
         diag2 = myTile.getNeighbor(3+magicNum)
@@ -240,21 +243,20 @@ class pawn(piece):
         
         
         if self.checkDiag(diag1):
-            diag1pos = diag1.getPos()
-            if self.isSuperValidMove(diag1pos): moves.append(diag1pos)
+            
+            if self.isSuperValidMove(myTile, diag1, op, kingTile): moves.append(diag1.getPos())
         if self.checkDiag(diag2): 
-            diag2pos = diag2.getPos()
-            if self.isSuperValidMove(diag2pos): moves.append(diag2pos)
+            
+            if self.isSuperValidMove(myTile, diag2, op, kingTile): moves.append(diag2.getPos())
         if front.isEmpty(): 
-            fPos = front.getPos()
-            if self.isSuperValidMove(fPos):
-                moves.append(fPos)
+            
+            if self.isSuperValidMove(myTile, front, op, kingTile):
+                moves.append(front.getPos())
             if not self.getHasMoved():
                 ffront = front.getNeighbor(2+magicNum)
-                ffPos = ffront.getPos()
                 if ffront.isEmpty():
-                    if self.isSuperValidMove(ffPos):
-                        moves.append(ffPos)
+                    if self.isSuperValidMove(myTile, ffront, op, kingTile):
+                        moves.append(ffront.getPos())
         return moves
         
 
@@ -269,28 +271,28 @@ class bishop(piece):
     def name(self):
         return "bishop"
 
-    def canMove(self, anX, aY):
-        destTile = self.getTile(anX, aY)
-        if not destTile.isEmpty() and destTile.getPlayer() == self.player:
+    def canMove(self, fromTile, destTile, _):
+        
+        if not destTile.isEmpty() and destTile.getColor() == self.color:
             return False
         for i in range(8):
             if i % 2 == 0:
                 continue
             else:
                 for j in range(8):
-                    if self.tile.getNeighbor(i).slide(i, j) == destTile:
+                    if fromTile.getNeighbor(i).slide(i, j) == destTile:
                         return default(destTile)
         return False
     
-    def findMoves(self):
+    def findMoves(self, fromTile, op, kingTile):
         moves = []
         for i in range(8):
             if i % 2 == 0:
                 continue
             else:
                 for j in range(8):
-                    posibileTile = self.tile.getNeighbor(i).slide(i, j)
-                    moves = self.checkValidity(posibileTile, moves)
+                    posibileTile = fromTile.getNeighbor(i).slide(i, j)
+                    moves = self.checkValidity( posibileTile, moves, fromTile, op, kingTile)
                    
                     if not posibileTile or not posibileTile.isEmpty():
                         break
@@ -304,57 +306,63 @@ class king(piece):
     def name(self):
         return "king"
     
-    def canMove(self, anX, aY, ):
-        destTile = self.getTile(anX, aY)
+    def isKing(self):
+        return True
+    
+    def canMove(self, fromTile, destTile, op):
+      
         answer = default(destTile)
-        if not destTile.isEmpty() and destTile.getPlayer() == self.player:
+        if not destTile.isEmpty() and destTile.getColor() == self.color:
             answer = False
         for i in range(8):
-            if self.tile.getNeighbor(i) == destTile and answer:
+            if fromTile.getNeighbor(i) == destTile and answer:
                 return answer
-        rightCastle = self.tile.getNeighbor(0).getNeighbor(0)
-        leftCastle = self.tile.getNeighbor(4).getNeighbor(4)
+        rightCastle = fromTile.getNeighbor(0).getNeighbor(0)
+        leftCastle = fromTile.getNeighbor(4).getNeighbor(4)
+        pos = destTile.getPos()
+        anX = pos[0]
+        aY = pos[1]
         if not self.hasMoved and rightCastle == destTile:
-            if self.op().isChecking() or rightCastle.getNeighbor(0).hasMoved():
+            if self.op().isChecking(op, fromTile) or rightCastle.getNeighbor(0).hasMoved():
                 return False
             if not rightCastle.getNeighbor(4).isEmpty() or not rightCastle.isEmpty():
                 return False
             self.setCoords(anX-1, aY)
-            if self.op().isChecking():
+            if self.op().isChecking(op, rightCastle.getNeighbor(4)):
                 self.setCoords(anX-2, aY)
                 return False
             self.setCoords(anX, aY)
-            if self.op().isChecking():
+            if self.op().isChecking(op, destTile):
                 self.setCoords(anX-2, aY)
                 return False
             self.setCoords(anX-2, aY)
             return [destTile, False, [7]]
         if not self.hasMoved and leftCastle == destTile:
-            if self.op().isChecking() or leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
+            if self.op().isChecking(op, fromTile) or leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
                 return False
             if not leftCastle.getNeighbor(4).isEmpty() or not leftCastle.isEmpty() or not leftCastle.getNeighbor(0).isEmpty():
                 return False
             self.setCoords(anX+1, aY)
-            if self.op().isChecking():
+            if self.op().isChecking(op, leftCastle.getNeighbor(0)):
                 self.setCoords(anX+2, aY)
                 return False
             self.setCoords(anX, aY)
-            if self.op().isChecking():
+            if self.op().isChecking(op, destTile):
                 self.setCoords(anX+2, aY)
                 return False
             self.setCoords(anX+2, aY)
             return [destTile, False, [0]]
         
-    def findMoves(self):
+    def findMoves(self, myTile, op, _):
         moves = []
-        myTile = self.tile
-        for i in range(8):
-            tile = self.tile.getNeighbor(i)
-            moves = self.checkValidity(tile, moves)
-        rightCastle = self.tile.getNeighbor(0).getNeighbor(0)
-        leftCastle = self.tile.getNeighbor(4).getNeighbor(4)
         
-        if not self.hasMoved and not self.op().isChecking():
+        for i in range(8):
+            tile = myTile.getNeighbor(i)
+            moves = self.checkValidity(tile, moves, myTile, op, tile)
+        rightCastle = myTile.getNeighbor(0).getNeighbor(0)
+        leftCastle = myTile.getNeighbor(4).getNeighbor(4)
+        
+        if not self.hasMoved and not self.op().isChecking(op, myTile):
             if not rightCastle.getNeighbor(0).hasMoved():
                 
                 rCpos = rightCastle.getPos()
@@ -362,9 +370,9 @@ class king(piece):
                 aY = rCpos[1]
                 if rightCastle.isEmpty() and rightCastle.getNeighbor(4).isEmpty():
                     self.setCoords(anX-1, aY)
-                    if not self.op().isChecking():
+                    if not self.op().isChecking(op, rightCastle.getNeighbor(4)):
                         self.setCoords(anX, aY)
-                        if not self.op().isChecking():
+                        if not self.op().isChecking(op, rightCastle):
                             moves.append(rCpos)
                 
             if not leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
@@ -373,9 +381,9 @@ class king(piece):
                 aY = lCpos[1]
                 if leftCastle.isEmpty() and leftCastle.getNeighbor(0).isEmpty() and leftCastle.getNeighbor(4).isEmpty():
                     self.setCoords(anX+1, aY)
-                    if not self.op().isChecking():
+                    if not self.op().isChecking(op, leftCastle.getNeighbor(0)):
                         self.setCoords(anX, aY)
-                        if not self.op().isChecking():
+                        if not self.op().isChecking(op, leftCastle):
                             
                             moves.append(lCpos)
 
@@ -390,23 +398,25 @@ class queen(piece):
 
     def name(self):
         return "queen"
+
     
-    def canMove(self, anX, aY):
-        destTile = self.getTile(anX, aY)
-        if not destTile.isEmpty() and destTile.getPlayer() == self.player:
+    def canMove(self, fromTile, destTile, _):
+        
+        if not destTile.isEmpty() and destTile.getColor() == self.color:
             return False
         for i in range(8):
             for j in range(8):
-                if self.tile.getNeighbor(i).slide(i, j) == destTile:
+                if fromTile.getNeighbor(i).slide(i, j) == destTile:
                     return default(destTile)
         return False
     
-    def findMoves(self):
+    def findMoves(self, fromTile, op, kingTile):
         moves = []
+        
         for i in range(8):
             for j in range(8):
-                tile = self.tile.getNeighbor(i).slide(i, j)
-                moves = self.checkValidity(tile, moves)
+                tile = fromTile.getNeighbor(i).slide(i, j)
+                moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
                 if not tile or not tile.isEmpty():
                     break
 

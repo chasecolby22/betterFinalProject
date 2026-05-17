@@ -1,8 +1,11 @@
 class board():
-        
+            
+
+ 
+
     def __init__(self):
         self.columns = []
-
+        self.tiles = False
         for i in range(8):
             self.columns.append(column(i))
 
@@ -21,6 +24,14 @@ class board():
     
     def getTile(self, col, row):
         return self.columns[col].getTile(row)
+    
+    def getTiles(self):
+        if not self.tiles:
+            self.tiles = []
+            for col in self.columns:
+                for tile in col.tiles:
+                    self.tiles.append(tile) 
+        return self.tiles
 
 class nullColumn():
     singleInstance = ""
@@ -144,6 +155,12 @@ class tile():
 
     def getPos(self):
         return (self.x, self.y)
+    
+    def getColor(self):
+        piece = self.getPiece()
+        if piece == "EMPTY":
+            return "NULL"
+        return piece.getColor()
     
     def slide(self, dir, i):
         if i == 0:

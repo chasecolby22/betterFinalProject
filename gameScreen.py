@@ -1,4 +1,4 @@
-from game import game
+from game import chess
 from pieces import *
 import time
 pygame.init()
@@ -110,17 +110,28 @@ class gameScreen():
 
     def drawSpecialSquares(self, aThing, aColor):
         superThing = getattr(self.game, aThing)
-        if superThing != "": self.drawSquares(superThing(), aColor)
+        
+        sqrs = superThing()
+        if sqrs != '':
+            if aThing == "pposibleMoves":
+                self.posibleDrawn = True
+                self.drawSquares(sqrs, aColor)
+            else:
+                if not self.posibleDrawn:
+                    self.drawSquares(sqrs, aColor)
         
     def updateScreen(self):
         if self.game.getNeedsUpdate():
             
+            self.game.drawCheck()
+            self.game.drawBot()
+            self.game.updateKingTiles()
             self.sur.fill(white)
             self.drawBoard()
-            
+            self.posibleDrawn = False
+            self.drawSpecialSquares("pposibleMoves", (255, 150, 0))
             self.drawSpecialSquares("ccheckers", (255, 0, 0))
             self.drawSpecialSquares("bbotChoice", (0, 100, 0))
-            self.drawSpecialSquares("pposibleMoves", (255, 150, 0))
             
             self.drawSprites()
             
@@ -130,14 +141,14 @@ class gameScreen():
     def drawPromotion(self):
         if len(self.specialpieces) == 0:
             
-            self.specialpieces.append(dumbQueen(9, 7, self.game.activePlayer))
-            self.specialpieces.append(dumbRook(9, 5, self.game.activePlayer))
-            self.specialpieces.append(dumbBishop(9, 3, self.game.activePlayer))
-            self.specialpieces.append(dumbKnight(9, 1, self.game.activePlayer))
+            self.specialpieces.append(dumbQueen(9, 7, self.game.activePlayer.getColor()))
+            self.specialpieces.append(dumbRook(9, 5, self.game.activePlayer.getColor()))
+            self.specialpieces.append(dumbBishop(9, 3, self.game.activePlayer.getColor()))
+            self.specialpieces.append(dumbKnight(9, 1, self.game.activePlayer.getColor()))
             
 
             for item in self.specialpieces: self.specialsprites.add(item)
-            
+            self.game.needsUpdate = True
             self.updateScreen() 
 
         
@@ -160,9 +171,10 @@ class gameScreen():
        
         self.buttons = []
         self.buttons.append(self.returnButton(start, 50, "No Bots", lambda: self.thing(lambda:self.game.startGame(False, 0, False, 0))))
-        self.buttons.append(self.returnButton(start, 350, "Bots", lambda: self.thing(lambda:self.game.startGame(True, 5, True, 10))))
+        self.buttons.append(self.returnButton(start, 350, "Bots", lambda: self.thing(lambda:self.game.startGame(True, 7, True, 10))))
         pygame.display.update()
 
+    
     def startHandle(self, anEvent):
         clicked = False
         handled = False
@@ -203,8 +215,8 @@ class gameScreen():
                     item.kill()
                 
                 self.game.activePlayer.promotionNeeded = False
-                self.game.activePlayer.finishSelection(self.game.botString)
-                self.game.moveHumanPiece()
+                self.game.finishSelection()
+                
                 self.specialpieces = []
                 self.addSprite(self.game.newPiece)
                 
@@ -219,7 +231,7 @@ class gameScreen():
         
         self.setUpStartScreen()
         running = True
-        self.game = game()
+        self.game = chess()
         clock = pygame.time.Clock()
         gameStarted = False
         
@@ -232,8 +244,9 @@ class gameScreen():
             if len(eventList) == 0:
                 if gameStarted and not self.game.gameStopped() and not self.game.activePlayerHuman():
                     self.game.botTurn()
+                    
                     self.updateScreen()
-                    time.sleep(0.25)
+                    time.sleep(0.1)
             for event in eventList:
                 if event.type == pygame.QUIT:
                     running = False
@@ -263,7 +276,7 @@ class gameScreen():
                                         for tile in row:
                                             
                                             if tile.collidepoint(event.pos):
-                                                anArray = self.game.handleEvent(event, tile.pos, self.game.botString)
+                                                anArray = self.game.handleEvent(event, tile.pos)
                                                 if not anArray[0]:
                                                     running = False
                                                 
@@ -275,19 +288,20 @@ class gameScreen():
                                                 found = True
                                         
                                     if not found:
-                                        self.game.handleEvent(event, False, self.game.botString)
+                                        self.game.handleEvent(event, False)
 
                                 else:
                                     self.game.botTurn()
                                     self.updateScreen()
-                                    time.sleep(0.25)
+                                    time.sleep(0.1)
+                                    
                             else:
                                 gameStarted = False
                                 running = False
             if gameStarted:
+                
                 self.updateScreen()
-                self.game.drawCheck()
-                clock.tick(60)
+                clock.tick(180)
                 
 
     def makeMainScreen(self):

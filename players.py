@@ -4,38 +4,40 @@ from pieces import *
 class player():
   
     
-    def hasMove(self):
-        for item in self.pieces:
-            if len(item.findMoves()) > 0:
+    def hasMove(self, listOfTiles, op):
+        for i in range(len(self.pieces)):
+
+        
+            if len(self.pieces[i].findMoves(listOfTiles[i], op, self.kingTile)) > 0:
                 return True
         return False
     
     def start(self):
-        self.pieces.append(knight(1, self.row, self))
-        self.pieces.append(knight(6, self.row, self))
-        self.king = king(4, self.row, self)
+        self.pieces.append(knight(1, self.row, self.color))
+        self.pieces.append(knight(6, self.row, self.color))
+        self.king = king(4, self.row, self.color)
         self.pieces.append(self.king)
-        self.pieces.append(queen(3, self.row, self))
-        self.pieces.append(rook(0, self.row, self))
-        self.pieces.append(rook(7, self.row, self))
-        self.pieces.append(bishop(2, self.row, self))
-        self.pieces.append(bishop(5, self.row, self))
+        self.pieces.append(queen(3, self.row, self.color))
+        self.pieces.append(rook(0, self.row, self.color))
+        self.pieces.append(rook(7, self.row, self.color))
+        self.pieces.append(bishop(2, self.row, self.color))
+        self.pieces.append(bishop(5, self.row, self.color))
         for i in range(8):
-            self.pieces.append(pawn(i, self.pawnsRow, self))
-
-    def getTile(self, anX, aY):
-        return self.board.getTile(anX, aY)
+            self.pieces.append(pawn(i, self.pawnsRow, self.color))
     
-    def getCheckers(self):
+    def getCheckers(self, listOfTiles, kingTile):
         checkers = []
-        aKing = self.op.king
-        for item in self.pieces:
-            if item.canMove(aKing.x, aKing.y):
+        
+        for i in range(len(self.pieces)):
+            item = self.pieces[i]
+            
+            if item.canMove(listOfTiles[i], kingTile, None ):
+                
                 checkers.append((item.x, item.y))
         return checkers
     
-    def isChecking(self):
-        checkers = self.getCheckers()
+    def isChecking(self, aListOfTiles, kingTile):
+        checkers = self.getCheckers(aListOfTiles, kingTile)
         return len(checkers) > 0
 
     def addPiece(self, aPiece):
@@ -44,19 +46,25 @@ class player():
 
     def removePiece(self, aPiece):
         if aPiece != "EMPTY":
+            
             self.pieces.remove(aPiece)
 
-    def isPlayer1(self):
-        return self.player1
+    def isPlayer2(self):
+        return not self.player1
+   
 
     def __init__(self, player1, aBoard):
         self.king = "EMPTY"
         self.board = aBoard
-        self.op = ""
+        self.kingTile = ""
+        
+        self.validPieceTile = ""
+        self.validPieceOgPos = ""
+        self.needsKingTile = True
         self.enPassantTile = ""
         self.tempMoveString = ""
         self.needsUpdate = True
-        self.humanSelection = ()
+        self.tuple = ()
         self.posibleMoves = ""
         self.pieces = []
         self.player1 = player1
@@ -66,7 +74,6 @@ class player():
         self.matchedBot = True
         self.validPiece = False
         self.originalMousePos = ""
-        self.validPieceOgPos = ""
 
         if player1:
             self.color = "white"
@@ -81,11 +88,7 @@ class player():
             self.oppositeRow = 0
             self.pname = "Player 2:  "
 
-    def hasPiece(self, col, row):
-        for item in self.pieces:
-            if item.tile.getPos() == (col, row):
-                return True
-        return False
+    
        
     
     def getColor(self):
@@ -98,18 +101,26 @@ class player():
     
 class humanPlayer(player):
 
+    def didMatchBot(self):
+        return self.matchedBot
+    
     def isHuman(self):
         return True
     
-    def checkSelection(self, aTile, botString):
+    def checkSelection(self, aTile, botString, op):
         thing = "abcdefgh"
         if not self.validPiece: return [False, False]
         if not aTile: return [False, False]
         self.good = False
-        self.ccol = aTile[0]
-        self.rrow = aTile[1]
-        if self.validPiece.cCanMove(self.ccol, self.rrow):
+        self.tempTile = aTile
+        pos = aTile.getPos()
+        self.ccol = pos[0]
+        self.rrow = pos[1]
+        theKingTile = self.kingTile
+        if self.validPiece.isKing(): theKingTile = aTile
+        if self.validPiece.cCanMove(self.validPieceTile, aTile, op, theKingTile):
             self.goodPiece = self.validPiece
+            self.goodPieceTile = self.validPieceTile
             self.good = True
             self.startX = thing[self.validPiece.x]
             self.startY = str(self.validPiece.y+1)
@@ -123,49 +134,51 @@ class humanPlayer(player):
                     return [False, True]
                     
             if not self.promotionNeeded:
-                return self.finishSelection(botString)
+                self.goodPieceTile = self.validPieceTile
+                return self.finishSelection(botString, op)
         return [False, False]
 
 
-    def finishSelection(self, botString):
+    def finishSelection(self, botString, op):
        
         self.tempMoveString = self.startX + self.startY + self.endX + self.endY + self.promotion
-        
-        if self.tempMoveString != botString:
+       
+        if self.tempMoveString[:4] != botString[:4]:
             self.matchedBot = False
             print("The bot thought about this move:  " + botString)
         else:
             self.matchedBot = True
             print("youre so smart")
         
-        if self.promotion == " ": anArray = self.validPiece.canMove(self.ccol, self.rrow)
+        if self.promotion == " ": anArray = self.validPiece.canMove(self.validPieceTile, self.tempTile, op)
         else: anArray = [None, False, False]
-        self.humanSelection = (self.goodPiece, self.ccol, self.rrow, anArray[1], anArray[2], self.promotion)
         
+        self.tuple = (self.goodPiece, self.ccol, self.rrow, anArray[1], anArray[2], self.promotion, self.goodPieceTile)
+        if self.goodPiece.isKing(): self.needsKingTile = True
         return [True, False]
        
     
-    def drawPosibilities(self, validPiece):
-
-        self.posibleMoves = validPiece.findMoves()
-        self.needsUpdate = True
+    def drawPosibilities(self, aPiece, startTile, op):
+        tempMoves = aPiece.findMoves(startTile, op, self.kingTile)
+        if self.posibleMoves != tempMoves:
+            self.posibleMoves = tempMoves
+            self.needsUpdate = True
         
 
-    def findPosibilities(self, aTile):
-   
+    def findPosibilities(self, aTile, op):
+        if not aTile: return False
         for piece in self.pieces:
             
-            if piece.tile.getPos() == aTile:
+            if piece.getPos() == aTile.getPos():
                 
-                self.drawPosibilities(piece)
+                self.drawPosibilities(piece, aTile, op)
                 pygame.mouse.set_cursor(pygame.cursors.diamond)
                 return piece
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        self.posibleMoves = ""
-        self.needsUpdate = True
+        
         return False
     
-    def handleEvent(self, aEvent, aTile, botString):
+    def handleEvent(self, aEvent, aTile, botString, op):
         done = False
         thePromotion = False
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
@@ -173,15 +186,18 @@ class humanPlayer(player):
             
             if not self.validPiece:
                 for piece in self.pieces:
-                    if piece.tile.getPos() == aTile:
+                    pos = aTile.getPos()
+                    if piece.getPos() == pos:
                         
                         self.validPiece = piece
-                        self.validPieceOgPos = (100 + piece.x * 75 + 75/2, 50 + (7-piece.y)*75 + 75/2)
+                        
+                        self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*(7-pos[1]) + 75/2)
+                        self.validPieceTile = aTile
                         self.dragging = False
                         self.mouseDown = True
                         self.originalMousePos = aEvent.pos
         elif aEvent.type == pygame.MOUSEBUTTONUP:
-  
+            
             wasClick = True
             if self.dragging:
                 self.dragging = False
@@ -192,37 +208,45 @@ class humanPlayer(player):
             self.originalMousePos = ""
             
             if not wasClick:
-                if not self.checkSelection(aTile, botString)[0]:
+                if not self.checkSelection(aTile, botString, op)[0]:
                     if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                     self.needsUpdate = True
                     self.validPiece = False
+                    self.validPieceTile = ""
+                    self.validPieceOgPos = ""
+                    self.tempTile = ""
                 else:
                     done = True
                     
             else:
-                if self.validPiece and self.validPiece.tile.getPos() != aTile:
-                    array = self.checkSelection(aTile, botString)
+                if self.validPiece and self.validPiece.getPos() != aTile.getPos():
+                    array = self.checkSelection(aTile, botString, op)
                     if not array[0]:
                         if array[1]: thePromotion = True
                         elif self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
                         self.validPiece = False
+                        self.validPieceTile = ""
+                        self.validPieceOgPos = ""
+                        self.tempTile = ""
 
                     else:
                         
                         done = True
         elif aEvent.type == pygame.MOUSEMOTION:
-           
+            
             if self.mouseDown:
                 
                 
                 if compareTuple(aEvent.pos, self.originalMousePos):
                     self.dragging = True
             
-            if not self.validPiece and not self.findPosibilities(aTile):
+            if not self.validPiece and not self.findPosibilities(aTile, op):
                 if self.posibleMoves != "":
                     self.posibleMoves = ""
                     self.needsUpdate = True
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+
                 
                 
             elif self.validPiece and self.dragging:
@@ -240,23 +264,42 @@ def compareTuple(t1, t2):
 
 class botPlayer(player):
 
+    def didMatchBot(self):
+        if self.started:
+            
+            return False
+        return True
+    
     def isHuman(self):
         return False
     
     def __init__(self, player1, difficulty, aBoard):
         super().__init__(player1, aBoard)
-        
+        self.started = False
         self.difficulty = difficulty
 
-    def takeTurn(self, botString):
+    def takeTurn(self, botString, listOfTiles, op):
         
+        self.started = True
+        validPiece = ""
+        fromTile = ""
+        toTile = ""
+
+        for item in listOfTiles:
+            if item.getPos() == (botString[0], botString[1]):
+                validPiece = item.piece
+                fromTile = item
+            if item.getPos() == (botString[2], botString[3]):
+                toTile = item
+                
         
-        validPiece = self.hasPiece(botString[0], botString[1]) 
+
         col = botString[2]
         row = botString[3]
-        anArray = validPiece.canMove(col, row)
         
-        self.botTuple = (validPiece, col, row, anArray[1], anArray[2], botString[4])
+        anArray = validPiece.canMove(fromTile, toTile, op)
+        
+        self.tuple = (validPiece, col, row, anArray[1], anArray[2], botString[4], fromTile)
         
         
         return True
