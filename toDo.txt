@@ -1,6 +1,0 @@
-toDo:
-
-fix bot behavior
-
-fix bot display for human
-
