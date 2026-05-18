@@ -241,7 +241,7 @@ class chess(game):
         self.drawBot()
         self.drawCheck()
         self.needsUpdate = True
-        print("Turn " + str(self.turns) + ": The bot choose:  " + botString)
+        print("Turn " + str(math.ceil(self.turns/2)) + ": The " + self.getNonActivePlayer().name() + "bot choose:  " + botString)
         
         return True
 
@@ -371,7 +371,7 @@ class chess(game):
             self.activePlayer = self.player2
         else:
             self.activePlayer = self.player1
-            self.turns += 1
+        self.turns += 1
 
     def activePlayerPrompt(self, aString):
         return self.activePlayer.name() + aString
@@ -410,7 +410,7 @@ class chess(game):
                     thing = rook
                 case "b":
                     thing = bishop
-            print(promotion)
+            
             aPiece.__class__ = thing
             aPiece.changeImage()
         
@@ -436,6 +436,7 @@ class chess(game):
             theTile = self.getTile(castle[0], self.activePlayer.row)
             self.movePiece(theTile.getPiece(), 3+magicNum, self.activePlayer.row, False, False, " ", theTile)
             self.switchPlayer()
+            self.turns -= 1
 
         destTile.setPiece(aPiece)
         
