@@ -1,8 +1,7 @@
 class board():
             
 
- 
-
+    
     def __init__(self):
         self.columns = []
         self.tiles = False
@@ -17,11 +16,17 @@ class board():
             if i != 7:
                 rightNeighbor = self.columns[i+1]
             self.columns[i].setNeighbors(leftNeighbor, rightNeighbor)
+            
         for item in self.columns:
             item.setTileNeighbors()
         for item in self.columns:
             item.setRookTileNeighbors()
-    
+            
+    def updateTiles(self, aScreenBoard):
+        for row in aScreenBoard:
+            for tile in row:
+                self.columns[tile.pos[0]].setTile(tile, tile.pos[1])
+        
     def getTile(self, col, row):
         return self.columns[col].getTile(row)
     
@@ -47,6 +52,10 @@ class nullColumn():
 
 class column():
     
+    def setTile(self, aTile, aPos):
+        for i in range(8):
+            self.tiles[aPos].rect = aTile
+        
     def __init__(self, i):
         self.tiles = []
         self.neighbors = []
@@ -147,11 +156,15 @@ class tile():
         self.piece = "EMPTY"
         self.neighbors = []
         self.rookNeighbors = []
+        self.rect = ""
         self.x = i
         self.y = j
         for _ in range(8):
             self.neighbors.append(nullTile.getSingleInstance())
             self.rookNeighbors.append(nullTile.getSingleInstance())
+
+    def collidepoint(self, aPos):
+        return self.rect.collidepoint(aPos)
 
     def getPos(self):
         return (self.x, self.y)

@@ -1,8 +1,17 @@
 from botHandler import botHandler
 from board import board
 from players import *
+
+ 
+
 class game(board):
 
+    def gatherSprites(self, aVisitor):
+        for item in self.player1.pieces:
+            aVisitor.addSprite(item)
+        for item in self.player2.pieces:
+            aVisitor.addSprite(item)
+        
     def __init__(self):
         super().__init__()
         self.player1 = ""
@@ -10,6 +19,7 @@ class game(board):
         self.activePlayer = ""
         self.turns = 0
         self.movesString = ""
+        self.needsMenu = False
         self.winnerPrinted = False
         self.needsUpdate = True
 
@@ -21,6 +31,7 @@ class game(board):
     def runBoth(self, aLambda):
         aLambda(self.player1)
         aLambda(self.player2)
+        
 
     def attachPieces(self, aPlayer):
         for item in aPlayer.pieces:
@@ -44,21 +55,47 @@ class game(board):
         self.player1.needsUpdate = False
         self.player2.needsUpdate = False
 
-    def eatPieces(self, aPlayer):
-        for piece in aPlayer.pieces:
-            if piece.needsRemoved:
-                aPlayer.removePiece(piece)
-
 
 
 class chess(game):
+
+    def handleNoEvent(self):
+        if self.gameStopped(): return False
+        if self.activePlayer.isHuman(): return False
+        self.botTurn()
+        return True
+
+    def collidesSpecial(self, aPos):
+        for item in self.specialPieces:
+            if item.rect.collidepoint(aPos):
+                return item
+        return False
+    
+    def menuHandle(self, anEvent):
+      
+            
+        if anEvent.type == pygame.MOUSEMOTION:
+            if self.collidesSpecial(anEvent.pos):
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        elif anEvent.type == pygame.MOUSEBUTTONUP:
+            item = self.collidesSpecial(anEvent.pos)
+            if item:
+                self.setPromotion(item.pro())
+                
+                self.specialPieces = []
+                self.needsMenu = False
+                return True
+        return False
+
     def __init__(self):
         super().__init__()
         
         self.botString = ""
         self.knowsCheck = False
         self.enPassantTile = ""
-        
+        self.specialPieces = []
         self.checkers = ""
         self.myBotHandler = botHandler()
         self.botChoice = ""
@@ -70,14 +107,50 @@ class chess(game):
 
     def activePlayerHuman(self):
         return self.activePlayer.isHuman()
+        
+    def drawPos(self):
+        pos = False
+        for tile in self.posibleMoves():
+            tile.rect.circleColor = (255, 150, 0)
+            pos = True
+        return pos
     
-   
+    def prepare(self):
+        if self.drawPos():
+            pass
+        else:
+            self.drawCheck()
+            self.drawBot()
 
-    def handleEvent(self, aEvent, aTile):
+
+    def handleEvent(self, aEvent):
         theTile = False
-        if aTile: theTile = self.getTile(aTile[0], aTile[1])
-        return self.activePlayer.handleEvent(aEvent, theTile, self.botString, self.grabPlayerTiles(self.getNonActivePlayer()))
+        pos = aEvent.pos
+        for tile in self.getTiles():
+            
+            if tile.collidepoint(pos):
+                theTile = tile
+                break
+        
+        result = self.activePlayer.handleEvent(aEvent, theTile, self.botString, self.grabPlayerTiles(self.getNonActivePlayer()))
+        if self.activePlayer.promotionNeeded: 
+            self.needsMenu = True
+            self.drawPromotion()
+        return result
     
+    def drawPromotion(self):
+
+        
+        self.specialPieces.append(dumbQueen(9, 7, self.color()))
+        self.specialPieces.append(dumbRook(9, 5, self.color()))
+        self.specialPieces.append(dumbBishop(9, 3, self.color()))
+        self.specialPieces.append(dumbKnight(9, 1, self.color()))
+        self.needsUpdate = True
+
+    def assignSpecialSprites(self, aGroup):
+        for item in self.specialPieces:
+            aGroup.add(item)
+        self.needsUpdate = True
     
     def moveHumanPiece(self):
         self.movesString += self.activePlayer.tempMoveString + " "
@@ -100,13 +173,14 @@ class chess(game):
         na.validPieceTile = ""
 
     def ccheckers(self):
+        
         return self.checkers
     
-    def pposibleMoves(self):
+    def posibleMoves(self):
+
         return self.activePlayer.posibleMoves
     
     def bbotChoice(self):
-        
         return self.botChoice
     
     def updateKingTiles(self):
@@ -114,22 +188,11 @@ class chess(game):
         
     
     def assignKingTile(self, aPlayer):
-        if aPlayer.needsKingTile:
-            dk = aPlayer.king
-            aPlayer.kingTile = self.getTile(dk.x, dk.y)
-            aPlayer.needsKingTile = False
-
-    def attachOpponent(self, aPlayer):
-        value = self.player1
-        if aPlayer == value:
-            value = self.player2
-        for piece in aPlayer.pieces:
-            piece.setOp(value)
-
-    def attachOp(self):
-        self.runBoth(lambda a: self.attachOpponent(a))
+        
+        dk = aPlayer.king
+        aPlayer.kingTile = self.getTile(dk.x, dk.y)
+        aPlayer.needsKingTile = False
        
-
     def startGame(self, player1bot, player1dif, player2bot, player2dif):
         
         self.player1 = ""
@@ -157,7 +220,6 @@ class chess(game):
         self.player2.start()
         self.updateKingTiles()
         self.attachAll()
-        self.attachOp()
         self.activePlayer = self.player1
 
     def finishSelection(self):
@@ -189,15 +251,16 @@ class chess(game):
             
             anArray = self.getSpecialArray()
             squares = []
-            squares.append((anArray[0], anArray[1]))
-            squares.append((anArray[2], anArray[3]))
+            squares.append(self.getTile(anArray[0], anArray[1]))
+            squares.append(self.getTile(anArray[2], anArray[3]))
             
             self.botChoice = squares
             
         else:
             
             self.botChoice = ""
-        
+        for item in self.botChoice:
+            item.rect.circleColor = (0, 100, 0) 
 
     
 
@@ -208,17 +271,21 @@ class chess(game):
                 daKing = self.activePlayer.king
                 tempChecker =  self.nonActiveCheckers()
                 
-                tempChecker.append((daKing.x, daKing.y))
+                tempChecker.append(self.getTile(daKing.x, daKing.y))
                 
                 if tempChecker != self.checkers:
-                    self.needsUpdate = True
+                    
                     self.checkers = tempChecker
                 
             else:
                 if self.checkers != "":
                     self.checkers = ""
-                    self.needsUpdate = True
             self.knowsCheck = True
+        
+        for item in self.checkers:
+            item.rect.circleColor = (255, 0, 0)
+
+        
         
 
     def grabPlayerTiles(self, aPlayer):
@@ -229,7 +296,11 @@ class chess(game):
     
     def nonActiveCheckers(self):
         dp = self.getNonActivePlayer()
-        return dp.getCheckers(self.grabPlayerTiles(dp), self.activePlayer.kingTile)
+        theCheckers = dp.getCheckers(self.grabPlayerTiles(dp), self.activePlayer.kingTile)
+        array = []
+        for item in theCheckers:
+            array.append(self.getTile(item[0], item[1]))
+        return array
 
     def activePlayerHasMove(self):
         dp = self.activePlayer
@@ -265,7 +336,7 @@ class chess(game):
         return self.parseThings(self.oldBotString[0], self.oldBotString[1], self.oldBotString[2], self.oldBotString[3])
     
     def botInput(self, aString):
-        promote = False
+        promote = " "
         if len(aString) > 4:
             promote = aString[4]
         
@@ -288,7 +359,8 @@ class chess(game):
             self.winnerPrinted = True
 
     def inCheck(self):
-        return self.getNonActivePlayer().isChecking(self.grabPlayerTiles(self.getNonActivePlayer()), self.activePlayer.kingTile)
+        
+        return len(self.nonActiveCheckers()) > 0
         
     
     def color(self):
@@ -304,10 +376,22 @@ class chess(game):
     def activePlayerPrompt(self, aString):
         return self.activePlayer.name() + aString
 
-    def eatAllPieces(self):
-        self.eatPieces(self.player1)
-        self.eatPieces(self.player2)
   
+    def setEnPassantTile(self, a):
+        self.enPassantTile = a
+        self.player1.setEnPassantTile(a)
+        self.player2.setEnPassantTile(a)
+
+    def clearEnPassantTile(self):
+        self.enPassantTile = ""
+        self.player1.clearEnPassantTile()
+        self.player2.clearEnPassantTile()
+            
+    def eatPiece(self, aPiece, aTile):
+        self.getNonActivePlayer().pieces.remove(aPiece)
+        aPiece.kill()
+        aTile.empty()
+
 
     def movePiece(self, aPiece, col, row, enPassantTile, castle, promotion, startTile):
         
@@ -315,49 +399,36 @@ class chess(game):
         eatenPiece = destTile.piece
         
         if promotion != " ":
-            '''
-            aPiece.remove(startTile)
-            match promotion:
-                case "q":
-                    aPiece = queen(-2, -2, self.activePlayer.getColor())
-                case "n":
-                    aPiece = knight(-2, -2, self.activePlayer.getColor())
-                case "r":
-                    aPiece = rook(-2, -2, self.activePlayer.getColor())
-                case "b":
-                    aPiece = bishop(-2, -2, self.activePlayer.getColor())
-            self.activePlayer.addPiece(aPiece)
-            aPiece.setOp(self.getNonActivePlayer())
-            self.newPiece = aPiece
-            '''
+            
             thing = ""
             match promotion:
-                case "queen":
+                case "q":
                     thing = queen
-                case "knight":
+                case "n":
                     thing = knight
-                case "rook":
+                case "r":
                     thing = rook
-                case "bishop":
+                case "b":
                     thing = bishop
+            print(promotion)
             aPiece.__class__ = thing
             aPiece.changeImage()
         
         if eatenPiece != "EMPTY":
-            eatenPiece.remove(destTile)
+            self.eatPiece(eatenPiece, destTile)
+            
         elif aPiece.name() == "pawn" and self.enPassantTile == destTile:
             magicNum = 0
             if self.p1act():
                 magicNum = 4
-            destTile.getNeighbor(2+magicNum).piece.remove(destTile)
+            theOnePiece = destTile.getNeighbor(2+magicNum).piece
+            self.eatPiece(theOnePiece, destTile)
+            
         if enPassantTile:
-            self.enPassantTile = enPassantTile
-            self.player1.enPassantTile = enPassantTile
-            self.player2.enPassantTile = enPassantTile
+            self.setEnPassantTile(enPassantTile)
+            
         else:
-            self.enPassantTile = ""
-            self.player1.enPassantTile = ""
-            self.player2.enPassantTile = ""
+            self.clearEnPassantTile()
         if castle:
             magicNum = 0
             if castle[0] == 7:
@@ -371,8 +442,8 @@ class chess(game):
         startTile.empty()
         aPiece.setHasMoved(True)
         aPiece.move(col, row)
+        if aPiece.isKing(): self.activePlayer.kingTile = destTile
         self.switchPlayer()
         self.knowsCheck = False
-        self.eatAllPieces()
         self.oldBotString = self.botString
         self.needsUpdate = True

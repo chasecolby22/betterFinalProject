@@ -1,6 +1,16 @@
 import math
 from pieces import *
 
+class cursor(pygame.sprite.Sprite):
+    def __init__(self, anImage):
+        super().__init__()
+        self.image = pygame.image.load(anImage).convert_alpha()
+        
+        self.rect = self.image.get_rect(topleft = (-100, -100)) 
+
+    def move(self, aPos):
+        self.rect = self.image.get_rect(center = aPos)  
+
 class player():
   
     
@@ -30,24 +40,29 @@ class player():
         
         for i in range(len(self.pieces)):
             item = self.pieces[i]
-            
-            if item.canMove(listOfTiles[i], kingTile, None ):
-                
-                checkers.append((item.x, item.y))
+            if item != self.king:
+                if item.canMove(listOfTiles[i], kingTile, None):
+                    listOfTiles[i].rect.circleColor = (255, 0, 0)
+                    checkers.append((item.x, item.y))
         return checkers
     
     def isChecking(self, aListOfTiles, kingTile):
         checkers = self.getCheckers(aListOfTiles, kingTile)
+        if len(checkers) > 0:
+            kingTile.rect.circleColor = (255, 0, 0)
         return len(checkers) > 0
 
     def addPiece(self, aPiece):
         if aPiece != "EMPTY":
             self.pieces.append(aPiece)
+    
+    def clearEnPassantTile(self):
+        for item in self.pieces:
+            item.enPassantTile = ""
 
-    def removePiece(self, aPiece):
-        if aPiece != "EMPTY":
-            
-            self.pieces.remove(aPiece)
+    def setEnPassantTile(self, a):
+        for item in self.pieces:
+            item.enPassantTile = a
 
     def isPlayer2(self):
         return not self.player1
@@ -63,7 +78,8 @@ class player():
         
         self.validPieceTile = ""
         self.validPieceOgPos = ""
-        self.needsKingTile = True
+        
+        self.highlightedTile = ""
         self.enPassantTile = ""
         self.tempMoveString = ""
         self.needsUpdate = True
@@ -145,7 +161,7 @@ class humanPlayer(player):
 
     def finishSelection(self, botString, op):
         val = self.promotion
-        if type(val) != str: val = self.promotion.pro()
+       
         self.tempMoveString = self.startX + self.startY + self.endX + self.endY + val
        
         if self.tempMoveString[:4] != botString[:4]:
@@ -159,15 +175,29 @@ class humanPlayer(player):
         else: anArray = [None, False, False]
         
         self.tuple = (self.goodPiece, self.ccol, self.rrow, anArray[1], anArray[2], self.promotion, self.goodPieceTile)
-        if self.goodPiece.isKing(): self.needsKingTile = True
         return [True, False]
        
-    
+    def setHighlight(self, aTile):
+        if self.highlightedTile != aTile:
+            self.clearHighlight()
+            aTile.rect.highlight()
+            self.highlightedTile = aTile
+            self.needsUpdate = True
+
     def drawPosibilities(self, aPiece, startTile, op):
         tempMoves = aPiece.findMoves(startTile, op, self.kingTile)
+        
         if self.posibleMoves != tempMoves:
+            
+            if len(tempMoves) != 0:
+                self.setHighlight(startTile)
+            else:
+                self.clearHighlight()
             self.posibleMoves = tempMoves
             self.needsUpdate = True
+            
+           
+            
         
 
     def findPosibilities(self, aTile, op):
@@ -183,13 +213,20 @@ class humanPlayer(player):
         
         return False
     
+    def clearHighlight(self):
+        if self.highlightedTile != "":
+            self.highlightedTile.rect.reset()
+            self.needsUpdate = True
+            
+        self.highlightedTile = ""
+
     def handleEvent(self, aEvent, aTile, botString, op):
         done = False
         thePromotion = False
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
             
             
-            if not self.validPiece:
+            if aTile and not self.validPiece:
                 for piece in self.pieces:
                     pos = aTile.getPos()
                     if piece.getPos() == pos:
@@ -202,42 +239,45 @@ class humanPlayer(player):
                         self.mouseDown = True
                         self.originalMousePos = aEvent.pos
         elif aEvent.type == pygame.MOUSEBUTTONUP:
-            
-            wasClick = True
-            if self.dragging:
-                self.dragging = False
-                wasClick = False
-            else:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-            self.mouseDown = False
-            self.originalMousePos = ""
-            
-            if not wasClick:
-                if not self.checkSelection(aTile, botString, op)[0]:
-                    if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
-                    self.needsUpdate = True
-                    self.validPiece = False
-                    self.validPieceTile = ""
-                    self.validPieceOgPos = ""
-                    self.tempTile = ""
+            if aTile:
+                wasClick = True
+                if self.dragging:
+                    self.dragging = False
+                    wasClick = False
                 else:
-                    done = True
-                    
-            else:
-                if self.validPiece and self.validPiece.getPos() != aTile.getPos():
-                    array = self.checkSelection(aTile, botString, op)
-                    if not array[0]:
-                        if array[1]: thePromotion = True
-                        elif self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                self.mouseDown = False
+                self.originalMousePos = ""
+                
+                if not wasClick:
+                    if not self.checkSelection(aTile, botString, op)[0]:
+                        if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
                         self.validPiece = False
                         self.validPieceTile = ""
                         self.validPieceOgPos = ""
+                        self.clearHighlight()
                         self.tempTile = ""
-
                     else:
-                        
+                        self.clearHighlight()
                         done = True
+                        
+                else:
+                    if self.validPiece and self.validPiece.getPos() != aTile.getPos():
+                        array = self.checkSelection(aTile, botString, op)
+                        if not array[0]:
+                            if array[1]: thePromotion = True
+                            elif self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                            self.needsUpdate = True
+                            self.validPiece = False
+                            self.validPieceTile = ""
+                            self.validPieceOgPos = ""
+                            self.clearHighlight()
+                            self.tempTile = ""
+
+                        else:
+                            self.clearHighlight()
+                            done = True
         elif aEvent.type == pygame.MOUSEMOTION:
             
             if self.mouseDown:
@@ -249,6 +289,7 @@ class humanPlayer(player):
             if not self.validPiece and not self.findPosibilities(aTile, op):
                 if self.posibleMoves != "":
                     self.posibleMoves = ""
+                    self.clearHighlight()
                     self.needsUpdate = True
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
@@ -257,8 +298,30 @@ class humanPlayer(player):
             elif self.validPiece and self.dragging:
                 self.validPiece.setPos(aEvent.pos)
                 self.needsUpdate = True
+            
+            if self.validPiece and aTile:
+                set = False
+                for item in self.posibleMoves:
+                    
+                    if aTile == item:
+                        if aTile != self.highlightedTile:
+                            
+                            self.setHighlight(aTile)
+                            set = True
+                            break
+                        set = True
+
+                if not set:
+                    
+                    self.clearHighlight()
+                    
+
+            
+            if not aTile:    
                 
-                
+                self.clearHighlight()
+           
+
         
         return [True, done, thePromotion]
 
