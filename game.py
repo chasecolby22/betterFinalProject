@@ -6,16 +6,19 @@ from players import *
 
 class game(board):
 
-    def gatherSprites(self, aVisitor):
-        for item in self.player1.pieces:
-            aVisitor.addSprite(item)
-        for item in self.player2.pieces:
-            aVisitor.addSprite(item)
+    def gatherSpecialSprites(self, aGroup):
+        for item in self.specialPieces:
+            aGroup.add(item)
+        self.needsUpdate = True
+
+    def gatherBaseSprites(self, aGroup):
+        self.runBoth(lambda a: a.addPieces(aGroup) )
         
-    def __init__(self):
-        super().__init__()
+    def __init__(self, width, height, pieceList):
+        super().__init__(width, height)
         self.player1 = ""
         self.player2 = ""
+        self.pieceList = pieceList
         self.activePlayer = ""
         self.turns = 0
         self.movesString = ""
@@ -88,18 +91,33 @@ class chess(game):
                 self.needsMenu = False
                 return True
         return False
+    
+    @classmethod
+    def standardPieceList(cls):
+        return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, knight, bishop, queen, king, bishop, knight, rook]]
 
-    def __init__(self):
-        super().__init__()
+    @classmethod
+    def test(cls):
+        return [[pawn, pawn, pawn, pawn], [rook, queen, king, rook]]
+    
+    def __init__(self, width, height, pieceList, wantsBot):
+
+        
+        super().__init__(width, height, pieceList)
         
         self.botString = ""
         self.knowsCheck = False
         self.enPassantTile = ""
+        self.width = width
+        self.height = height
         self.specialPieces = []
         self.checkers = ""
-        self.myBotHandler = botHandler()
-        self.botChoice = ""
-        self.botStarted = self.myBotHandler.startBot()
+        if wantsBot:
+            self.myBotHandler = botHandler()
+            self.botChoice = ""
+            self.botStarted = self.myBotHandler.startBot()
+        else:
+            self.botStarted = False
 
     def setPromotion(self, a):
         self.activePlayer.setPromotion(a)
@@ -111,7 +129,9 @@ class chess(game):
     def drawPos(self):
         pos = False
         for tile in self.posibleMoves():
+            if tile.rect.border == (255, 100, 0): tile.rect.reset()
             tile.rect.circleColor = (255, 150, 0)
+
             pos = True
         return pos
     
@@ -139,18 +159,16 @@ class chess(game):
         return result
     
     def drawPromotion(self):
-
-        
-        self.specialPieces.append(dumbQueen(9, 7, self.color()))
-        self.specialPieces.append(dumbRook(9, 5, self.color()))
-        self.specialPieces.append(dumbBishop(9, 3, self.color()))
-        self.specialPieces.append(dumbKnight(9, 1, self.color()))
+        array = [7, 5, 3, 1]
+        if self.height < 5:
+            array = [3, 2, 1, 0]
+        self.specialPieces.append(dumbQueen(self.width+1, array[0], self.color(), self.height))
+        self.specialPieces.append(dumbRook(self.width+1, array[1], self.color(), self.height))
+        self.specialPieces.append(dumbBishop(self.width+1, array[2], self.color(), self.height))
+        self.specialPieces.append(dumbKnight(self.width+1, array[3], self.color(), self.height))
         self.needsUpdate = True
 
-    def assignSpecialSprites(self, aGroup):
-        for item in self.specialPieces:
-            aGroup.add(item)
-        self.needsUpdate = True
+    
     
     def moveHumanPiece(self):
         self.movesString += self.activePlayer.tempMoveString + " "
@@ -160,8 +178,9 @@ class chess(game):
         
 
     def getBotInput(self, aDifficulty):
-        self.botString = self.myBotHandler.getBotInput(self.movesString, aDifficulty)[9:14]
-        return self.botString
+        if self.botStarted:
+            self.botString = self.myBotHandler.getBotInput(self.movesString, aDifficulty)[9:14]
+            return self.botString
     
     def resetEventFlags(self):
         na = self.getNonActivePlayer()
@@ -177,7 +196,7 @@ class chess(game):
         return self.checkers
     
     def posibleMoves(self):
-
+        
         return self.activePlayer.posibleMoves
     
     def bbotChoice(self):
@@ -193,7 +212,7 @@ class chess(game):
         aPlayer.kingTile = self.getTile(dk.x, dk.y)
         aPlayer.needsKingTile = False
        
-    def startGame(self, player1bot, player1dif, player2bot, player2dif):
+    def startGame(self, player1dif, player2dif):
         
         self.player1 = ""
         self.player2 = ""
@@ -203,19 +222,19 @@ class chess(game):
 
         if not self.botStarted:
             print("Sorry bot is sleepy")
-            self.player1 = humanPlayer(True, self)
-            self.player2 = humanPlayer(False, self)
+            self.player1 = humanPlayer(True, self.pieceList, self.height)
+            self.player2 = humanPlayer(False, self.pieceList, self.height)
             
         
         else:
-            if player1bot:
-                self.player1 = botPlayer(True, player1dif, self)
+            if player1dif != 0:
+                self.player1 = botPlayer(True, player1dif, self.pieceList, self.height)
             else:
-                self.player1 = humanPlayer(True, self)
-            if player2bot:
-                self.player2 = botPlayer(False, player2dif, self)
+                self.player1 = humanPlayer(True, self.pieceList, self.height)
+            if player2dif != 0:
+                self.player2 = botPlayer(False, player2dif, self.pieceList, self.height)
             else:
-                self.player2 = humanPlayer(False, self)
+                self.player2 = humanPlayer(False, self.pieceList, self.height)
         self.player1.start()
         self.player2.start()
         self.updateKingTiles()
@@ -246,46 +265,51 @@ class chess(game):
         return True
 
     def drawBot(self):
-        
-        if not self.getNonActivePlayer().didMatchBot():
-            
-            anArray = self.getSpecialArray()
-            squares = []
-            squares.append(self.getTile(anArray[0], anArray[1]))
-            squares.append(self.getTile(anArray[2], anArray[3]))
-            
-            self.botChoice = squares
-            
-        else:
-            
-            self.botChoice = ""
-        for item in self.botChoice:
-            item.rect.circleColor = (0, 100, 0) 
+        if self.botStarted:
+            if not self.getNonActivePlayer().didMatchBot():
+                
+                anArray = self.getSpecialArray()
+                squares = []
+                squares.append(self.getTile(anArray[0], anArray[1]))
+                squares.append(self.getTile(anArray[2], anArray[3]))
+                
+                self.botChoice = squares
+                
+            else:
+                
+                self.botChoice = ""
+            for item in self.botChoice:
+                item.rect.circleColor = (0, 100, 0) 
 
     
 
     def drawCheck(self):
-        if not self.knowsCheck:
+        if not self.activePlayer.dragging:
+            if not self.knowsCheck:
 
-            if self.inCheck():
-                daKing = self.activePlayer.king
-                tempChecker =  self.nonActiveCheckers()
-                
-                tempChecker.append(self.getTile(daKing.x, daKing.y))
-                
-                if tempChecker != self.checkers:
+                if self.inCheck():
+                    daKing = self.activePlayer.king
+                    tempChecker =  self.nonActiveCheckers()
                     
-                    self.checkers = tempChecker
-                
-            else:
-                if self.checkers != "":
-                    self.checkers = ""
-            self.knowsCheck = True
-        
-        for item in self.checkers:
-            item.rect.circleColor = (255, 0, 0)
+                    tempChecker.append(self.getTile(daKing.x, daKing.y))
+                    
+                    if tempChecker != self.checkers:
+                        
+                        self.checkers = tempChecker
+                    
+                else:
+                    if self.checkers != "":
+                        for item in self.checkers:
+                            item.rect.reset()
+                        self.checkers = ""
+                self.knowsCheck = True
+            
+            
+                    
+            for item in self.checkers:
+                item.rect.highlight((255, 100, 0))
 
-        
+            
         
 
     def grabPlayerTiles(self, aPlayer):

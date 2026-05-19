@@ -23,17 +23,18 @@ class player():
         return False
     
     def start(self):
-        self.pieces.append(knight(1, self.row, self.color))
-        self.pieces.append(knight(6, self.row, self.color))
-        self.king = king(4, self.row, self.color)
-        self.pieces.append(self.king)
-        self.pieces.append(queen(3, self.row, self.color))
-        self.pieces.append(rook(0, self.row, self.color))
-        self.pieces.append(rook(7, self.row, self.color))
-        self.pieces.append(bishop(2, self.row, self.color))
-        self.pieces.append(bishop(5, self.row, self.color))
-        for i in range(8):
-            self.pieces.append(pawn(i, self.pawnsRow, self.color))
+        for i in range(len(self.pieceList[0])) :
+            item = self.pieceList[0][i](i, self.pawnsRow, self.color, self.height)
+            if item.isKing(): self.king = item
+            self.pieces.append(item)
+            
+        for i in range(len(self.pieceList[1])):
+            item = self.pieceList[1][i](i, self.row, self.color, self.height)
+            if item.isKing() : self.king = item
+            self.pieces.append(item)
+
+        
+            
     
     def getCheckers(self, listOfTiles, kingTile):
         checkers = []
@@ -42,7 +43,6 @@ class player():
             item = self.pieces[i]
             if item != self.king:
                 if item.canMove(listOfTiles[i], kingTile, None):
-                    listOfTiles[i].rect.circleColor = (255, 0, 0)
                     checkers.append((item.x, item.y))
         return checkers
     
@@ -71,11 +71,15 @@ class player():
         self.promotion = a
         self.promotionNeeded = False
 
-    def __init__(self, player1, aBoard):
+    def addPieces(self, aGroup):
+        for item in self.pieces:
+            aGroup.add(item)
+
+    def __init__(self, player1, pieceList, height):
         self.king = "EMPTY"
-        self.board = aBoard
+        self.pieceList = pieceList
         self.kingTile = ""
-        
+        self.height = height
         self.validPieceTile = ""
         self.validPieceOgPos = ""
         
@@ -99,12 +103,12 @@ class player():
             self.color = "white"
             self.row = 0
             self.pawnsRow = 1
-            self.oppositeRow = 7
+            self.oppositeRow = height - 1
             self.pname = "Player 1:  "
         else:
             self.color = "black"
-            self.row = 7
-            self.pawnsRow = 6
+            self.row = height - 1
+            self.pawnsRow = height - 2
             self.oppositeRow = 0
             self.pname = "Player 2:  "
 
@@ -151,10 +155,12 @@ class humanPlayer(player):
             if self.validPiece.name() == "pawn":
                 if self.rrow == self.oppositeRow:
                     self.promotionNeeded = True
+                    self.validPieceTile.rect.reset()
                     return [False, True]
                     
             if not self.promotionNeeded:
                 self.goodPieceTile = self.validPieceTile
+                self.validPieceTile.rect.reset()
                 return self.finishSelection(botString, op)
         return [False, False]
 
@@ -163,34 +169,35 @@ class humanPlayer(player):
         val = self.promotion
        
         self.tempMoveString = self.startX + self.startY + self.endX + self.endY + val
-       
-        if self.tempMoveString[:4] != botString[:4]:
-            self.matchedBot = False
-            print("The bot thought about this move:  " + botString)
-        else:
-            self.matchedBot = True
-            print("youre so smart")
+        if botString != "":
+            if self.tempMoveString[:4] != botString[:4]:
+                self.matchedBot = False
+                print("The bot thought about this move:  " + botString)
+            else:
+                self.matchedBot = True
+                print("youre so smart")
         
         if self.promotion == " ": anArray = self.validPiece.canMove(self.validPieceTile, self.tempTile, op)
         else: anArray = [None, False, False]
         
         self.tuple = (self.goodPiece, self.ccol, self.rrow, anArray[1], anArray[2], self.promotion, self.goodPieceTile)
+        
         return [True, False]
        
-    def setHighlight(self, aTile):
+    def setHighlight(self, aTile, aColor):
         if self.highlightedTile != aTile:
             self.clearHighlight()
-            aTile.rect.highlight()
+            aTile.rect.highlight(aColor)
             self.highlightedTile = aTile
             self.needsUpdate = True
 
     def drawPosibilities(self, aPiece, startTile, op):
         tempMoves = aPiece.findMoves(startTile, op, self.kingTile)
         
-        if self.posibleMoves != tempMoves:
+        if self.highlightedTile != startTile or self.posibleMoves != tempMoves:
             
             if len(tempMoves) != 0:
-                self.setHighlight(startTile)
+                self.setHighlight(startTile, (0, 100, 0))
             else:
                 self.clearHighlight()
             self.posibleMoves = tempMoves
@@ -223,6 +230,7 @@ class humanPlayer(player):
     def handleEvent(self, aEvent, aTile, botString, op):
         done = False
         thePromotion = False
+        
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
             
             
@@ -233,7 +241,7 @@ class humanPlayer(player):
                         
                         self.validPiece = piece
                         
-                        self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*(7-pos[1]) + 75/2)
+                        self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*((self.height -1)-pos[1]) + 75/2)
                         self.validPieceTile = aTile
                         self.dragging = False
                         self.mouseDown = True
@@ -254,10 +262,14 @@ class humanPlayer(player):
                         if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
                         self.validPiece = False
+                        if self.validPiece: self.validPieceTile.rect.reset()
                         self.validPieceTile = ""
                         self.validPieceOgPos = ""
+                        
+                        
                         self.clearHighlight()
                         self.tempTile = ""
+                        
                     else:
                         self.clearHighlight()
                         done = True
@@ -267,24 +279,43 @@ class humanPlayer(player):
                         array = self.checkSelection(aTile, botString, op)
                         if not array[0]:
                             if array[1]: thePromotion = True
-                            elif self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                            self.validPiece.setPos(self.validPieceOgPos)
                             self.needsUpdate = True
-                            self.validPiece = False
+                            self.validPieceTile.rect.reset()
                             self.validPieceTile = ""
                             self.validPieceOgPos = ""
+                            self.posibleMoves = ""
                             self.clearHighlight()
+                            self.validPiece = self.findPosibilities(aTile, op)
+                            if self.validPiece: self.validPieceTile = aTile
                             self.tempTile = ""
 
                         else:
+                            
                             self.clearHighlight()
+                            
                             done = True
+            else:
+                if self.validPiece and self.dragging:
+                    self.validPiece.setPos(self.validPieceOgPos)
+                    self.needsUpdate = True
+                    self.validPiece = False
+                    self.validPieceOgPos = ""
+                    self.validPieceTile.rect.reset()
+                    self.validPieceTile = ""
+                    self.posibleMoves = ""
+                    self.clearHighlight()
+                    self.dragging = False
+
         elif aEvent.type == pygame.MOUSEMOTION:
             
             if self.mouseDown:
                 
                 
                 if compareTuple(aEvent.pos, self.originalMousePos):
-                    self.dragging = True
+                    if not self.dragging:
+                        self.dragging = True
+                        if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
             
             if not self.validPiece and not self.findPosibilities(aTile, op):
                 if self.posibleMoves != "":
@@ -296,6 +327,7 @@ class humanPlayer(player):
                 
                 
             elif self.validPiece and self.dragging:
+                
                 self.validPiece.setPos(aEvent.pos)
                 self.needsUpdate = True
             
@@ -306,21 +338,28 @@ class humanPlayer(player):
                     if aTile == item:
                         if aTile != self.highlightedTile:
                             
-                            self.setHighlight(aTile)
+                            self.setHighlight(aTile, (0, 100, 0))
+                            self.validPieceTile.rect.highlight((139, 128, 0))    
                             set = True
                             break
+                        self.validPieceTile.rect.highlight((139, 128, 0))
                         set = True
 
                 if not set:
-                    
-                    self.clearHighlight()
+                    if self.validPieceTile != aTile:
+                        self.setHighlight(aTile, (255, 0, 0))
+                        self.validPieceTile.rect.highlight((139, 128, 0))
+                    else:
+                        self.setHighlight(aTile, (200, 200, 0))
+                    self.needsUpdate = True
                     
 
             
             if not aTile:    
                 
                 self.clearHighlight()
-           
+
+            
 
         
         return [True, done, thePromotion]

@@ -2,18 +2,19 @@ class board():
             
 
     
-    def __init__(self):
+    def __init__(self, width, height):
         self.columns = []
         self.tiles = False
-        for i in range(8):
-            self.columns.append(column(i))
+        self.height = height
+        for i in range(width):
+            self.columns.append(column(i, height))
 
-        for i in range(8):
+        for i in range(width):
             leftNeighbor = nullColumn.getSingleInstance()
             rightNeighbor = nullColumn.getSingleInstance()
             if i != 0:
                 leftNeighbor = self.columns[i-1]
-            if i != 7:
+            if i != width - 1:
                 rightNeighbor = self.columns[i+1]
             self.columns[i].setNeighbors(leftNeighbor, rightNeighbor)
             
@@ -56,17 +57,18 @@ class column():
         for i in range(8):
             self.tiles[aPos].rect = aTile
         
-    def __init__(self, i):
+    def __init__(self, i, height):
         self.tiles = []
         self.neighbors = []
-        for j in range(8):
+        self.height = height
+        for j in range(height):
             self.tiles.append(tile(i, j))
         for _ in range(2):
-            self.neighbors.append(nullColumn.getSingleInstance())
-        for i in range(8):
+            self.neighbors.append(None)
+        for i in range(height):
             if i != 0:
                 self.tiles[i].setNeighbor(6, self.tiles[i-1])
-            if i != 7:
+            if i != height-1:
                 self.tiles[i].setNeighbor(2, self.tiles[i+1])
 
     def setNeighbors(self, left, right):
@@ -74,7 +76,7 @@ class column():
         self.neighbors[1] = right
 
     def setTileNeighbors(self):
-        for i in range(8):
+        for i in range(self.height):
             rightNeighbor = self.neighbors[1].getTile(i)
             leftNeighbor = self.neighbors[0].getTile(i)
 
@@ -87,7 +89,7 @@ class column():
             self.tiles[i].setNeighbor(5, leftNeighbor.getNeighbor(6))
 
     def setRookTileNeighbors(self):
-        for i in range(8):
+        for i in range(self.height):
             rightNeighbor = self.neighbors[1].getTile(i)
             leftNeighbor = self.neighbors[0].getTile(i)
             rrightNeighbor = rightNeighbor.getNeighbor(0)
