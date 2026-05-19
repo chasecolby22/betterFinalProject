@@ -91,13 +91,20 @@ class chess(game):
                 self.needsMenu = False
                 return True
         return False
+    @classmethod
+    def standard(cls):
+        return[8, 8, cls.standardPieceList(), True]
+
+    @classmethod
+    def test(cls):
+        return [16, 4, cls.testPieceList(), False]
     
     @classmethod
     def standardPieceList(cls):
         return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, knight, bishop, queen, king, bishop, knight, rook]]
 
     @classmethod
-    def test(cls):
+    def testPieceList(cls):
         return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, rook, knight, knight, bishop, bishop, queen, queen, king, queen, bishop, bishop, knight, knight, rook, rook]]
     
     def __init__(self, width, height, pieceList, wantsBot):
@@ -109,6 +116,7 @@ class chess(game):
         self.knowsCheck = False
         self.theGameIsStopped = False
         self.knowsGameIsStopped = False
+        self.knowsBot = False
         self.enPassantTile = ""
         self.width = width
         self.height = height
@@ -120,6 +128,11 @@ class chess(game):
             self.botStarted = self.myBotHandler.startBot()
         else:
             self.botStarted = False
+
+    def clearKnowsFlags(self):
+        self.knowsBot = False
+        self.knowsCheck = False
+        self.knowsGameIsStopped = False
 
     def setPromotion(self, a):
         self.activePlayer.setPromotion(a)
@@ -154,7 +167,7 @@ class chess(game):
                 theTile = tile
                 break
         
-        result = self.activePlayer.handleEvent(aEvent, theTile, self.botString, self.grabPlayerTiles(self.getNonActivePlayer()))
+        result = self.activePlayer.handleEvent(aEvent, theTile, self.grabBotString(), self.grabPlayerTiles(self.getNonActivePlayer()))
         if self.activePlayer.promotionNeeded: 
             self.needsMenu = True
             self.drawPromotion()
@@ -203,16 +216,6 @@ class chess(game):
     
     def bbotChoice(self):
         return self.botChoice
-    
-    def updateKingTiles(self):
-        self.runBoth(lambda a: self.assignKingTile(a))
-        
-    
-    def assignKingTile(self, aPlayer):
-        
-        dk = aPlayer.king
-        aPlayer.kingTile = self.getTile(dk.x, dk.y)
-        aPlayer.needsKingTile = False
        
     def startGame(self, player1dif, player2dif):
         
@@ -239,7 +242,8 @@ class chess(game):
                 self.player2 = humanPlayer(False, self.pieceList, self.height)
         self.player1.start()
         self.player2.start()
-        self.updateKingTiles()
+        self.player1.kingTile = self.getTile(self.player1.king.x, self.player1.king.y)
+        self.player2.kingTile = self.getTile(self.player2.king.x, self.player2.king.y)
         self.attachAll()
         self.activePlayer = self.player1
 
@@ -268,7 +272,9 @@ class chess(game):
         return True
 
     def drawBot(self):
+       
         if self.botStarted:
+            
             if not self.getNonActivePlayer().didMatchBot():
                 
                 anArray = self.getSpecialArray()
@@ -281,7 +287,9 @@ class chess(game):
             else:
                 
                 self.botChoice = ""
+            
             for item in self.botChoice:
+                
                 item.rect.circleColor = (0, 100, 0) 
 
     
@@ -428,6 +436,12 @@ class chess(game):
         aPiece.kill()
         aTile.empty()
 
+    def grabBotString(self):
+        if self.botStarted:
+            if not self.knowsBot:
+                self.getBotInput(10)
+                self.knowsBot = True
+        return self.botString
 
     def movePiece(self, aPiece, col, row, enPassantTile, castle, promotion, startTile):
         
@@ -481,7 +495,7 @@ class chess(game):
         aPiece.move(col, row)
         if aPiece.isKing(): self.activePlayer.kingTile = destTile
         self.switchPlayer()
-        self.knowsCheck = False
-        self.knowsGameIsStopped = False
+        self.clearKnowsFlags()
         self.oldBotString = self.botString
+        self.activePlayer.hasMadeMove = True
         self.needsUpdate = True

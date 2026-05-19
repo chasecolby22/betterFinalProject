@@ -17,7 +17,7 @@ class player():
     
     def hasMove(self, listOfTiles, op):
         for i in range(len(self.pieces)):
-
+            
             
             if len(self.pieces[i].findMoves(listOfTiles[i], op, self.kingTile)) > 0:
                 return True
@@ -93,6 +93,7 @@ class player():
         self.enPassantTile = ""
         self.tempMoveString = ""
         self.needsUpdate = True
+        self.hasMadeMove = False
         self.tuple = ()
         self.posibleMoves = ""
         self.pieces = []
@@ -152,10 +153,11 @@ class humanPlayer(player):
             self.goodPiece = self.validPiece
             self.goodPieceTile = self.validPieceTile
             self.good = True
-            self.startX = thing[self.validPiece.x]
-            self.startY = str(self.validPiece.y+1)
-            self.endX = thing[self.ccol]
-            self.endY = str(self.rrow+1)
+            if botString != "":
+                self.startX = thing[self.validPiece.x]
+                self.startY = str(self.validPiece.y+1)
+                self.endX = thing[self.ccol]
+                self.endY = str(self.rrow+1)
             self.promotion = " "
             self.promotionNeeded = False
             if self.validPiece.name() == "pawn":
@@ -174,8 +176,8 @@ class humanPlayer(player):
     def finishSelection(self, botString, op):
         val = self.promotion
        
-        self.tempMoveString = self.startX + self.startY + self.endX + self.endY + val
         if botString != "":
+            self.tempMoveString = self.startX + self.startY + self.endX + self.endY + val
             if self.tempMoveString[:4] != botString[:4]:
                 self.matchedBot = False
                 print("The bot thought about this move:  " + botString)
@@ -390,7 +392,7 @@ class humanPlayer(player):
             
 
         
-        return [True, done, thePromotion]
+        return [done, thePromotion]
     def handleNoEvent(self):
         
         if not self.dragging:
