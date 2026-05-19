@@ -114,8 +114,8 @@ class gameScreen():
         self.wantsBot = True
 
     def test(self):
-        self.height = 12
-        self.width = 4
+        self.height = 4
+        self.width = 16
         self.pieceList = chess.test()
         self.wantsBot = False
 
@@ -257,7 +257,7 @@ class gameScreen():
                 if gameStarted and self.game.handleNoEvent():
                     
                     self.updateScreen()
-                    time.sleep(0.25)
+                    
             for event in eventList:
                 if event.type == pygame.QUIT:
                     running = False
@@ -281,7 +281,7 @@ class gameScreen():
                       
                         if isMouseEvent(event):
                             
-                            if not self.game.gameStopped():
+                            if self.game.gameRunning():
                                 if self.game.activePlayerHuman():
                                     anArray = self.game.handleEvent(event)
                                     
@@ -295,9 +295,9 @@ class gameScreen():
                                     
 
                                 else:
+                                    
                                     self.game.botTurn()
                                     self.updateScreen()
-                                    time.sleep(0.25)
                                     
                             else:
                                 gameStarted = False

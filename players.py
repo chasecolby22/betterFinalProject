@@ -1,5 +1,6 @@
 import math
 from pieces import *
+import time
 
 class cursor(pygame.sprite.Sprite):
     def __init__(self, anImage):
@@ -17,7 +18,7 @@ class player():
     def hasMove(self, listOfTiles, op):
         for i in range(len(self.pieces)):
 
-        
+            
             if len(self.pieces[i].findMoves(listOfTiles[i], op, self.kingTile)) > 0:
                 return True
         return False
@@ -30,7 +31,11 @@ class player():
             
         for i in range(len(self.pieceList[1])):
             item = self.pieceList[1][i](i, self.row, self.color, self.height)
-            if item.isKing() : self.king = item
+            if item.isKing() : 
+                if self.king == "EMPTY":
+                    self.king = item
+                else:
+                    exit()
             self.pieces.append(item)
 
         
@@ -47,6 +52,7 @@ class player():
         return checkers
     
     def isChecking(self, aListOfTiles, kingTile):
+        
         checkers = self.getCheckers(aListOfTiles, kingTile)
         if len(checkers) > 0:
             kingTile.rect.circleColor = (255, 0, 0)
@@ -234,18 +240,29 @@ class humanPlayer(player):
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
             
             
-            if aTile and not self.validPiece:
-                for piece in self.pieces:
-                    pos = aTile.getPos()
-                    if piece.getPos() == pos:
-                        
-                        self.validPiece = piece
-                        
-                        self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*((self.height -1)-pos[1]) + 75/2)
-                        self.validPieceTile = aTile
-                        self.dragging = False
-                        self.mouseDown = True
-                        self.originalMousePos = aEvent.pos
+            if aTile :
+                if not self.validPiece:
+                    
+                    for piece in self.pieces:
+                        pos = aTile.getPos()
+                        if piece.getPos() == pos:
+                            
+                            self.validPiece = piece
+                            
+                            self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*((self.height -1)-pos[1]) + 75/2)
+                            self.validPieceTile = aTile
+                            self.dragging = False
+                            self.mouseDown = True
+                            self.mouseDownTime = time.time()
+                            self.needsUpdate = True
+                            self.originalMousePos = aEvent.pos
+
+                else:
+                    if self.validPieceTile == aTile:
+                        self.dragging = True
+                        pygame.mouse.set_cursor(pygame.cursors.diamond)
+               
+
         elif aEvent.type == pygame.MOUSEBUTTONUP:
             if aTile:
                 wasClick = True
@@ -258,6 +275,7 @@ class humanPlayer(player):
                 self.originalMousePos = ""
                 
                 if not wasClick:
+
                     if not self.checkSelection(aTile, botString, op)[0]:
                         if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
@@ -287,7 +305,12 @@ class humanPlayer(player):
                             self.posibleMoves = ""
                             self.clearHighlight()
                             self.validPiece = self.findPosibilities(aTile, op)
-                            if self.validPiece: self.validPieceTile = aTile
+                            if self.validPiece:
+                                self.validPieceTile = aTile
+                                pos = aTile.getPos()
+                                self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*((self.height -1)-pos[1]) + 75/2)
+                                
+                                
                             self.tempTile = ""
 
                         else:
@@ -295,6 +318,7 @@ class humanPlayer(player):
                             self.clearHighlight()
                             
                             done = True
+
             else:
                 if self.validPiece and self.dragging:
                     self.validPiece.setPos(self.validPieceOgPos)
@@ -309,13 +333,17 @@ class humanPlayer(player):
 
         elif aEvent.type == pygame.MOUSEMOTION:
             
-            if self.mouseDown:
-                
-                
-                if compareTuple(aEvent.pos, self.originalMousePos):
-                    if not self.dragging:
+            if not self.dragging:
+                if self.mouseDown:
+                    if time.time() - self.mouseDownTime > .25:
                         self.dragging = True
                         if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
+                    
+                
+                    if compareTuple(aEvent.pos, self.originalMousePos):
+                        if not self.dragging:
+                            self.dragging = True
+                            if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
             
             if not self.validPiece and not self.findPosibilities(aTile, op):
                 if self.posibleMoves != "":
@@ -363,7 +391,15 @@ class humanPlayer(player):
 
         
         return [True, done, thePromotion]
-
+    def handleNoEvent(self):
+        
+        if not self.dragging:
+            if self.mouseDown:  
+                
+                if time.time() - self.mouseDownTime > .25:
+                    self.dragging = True
+                    if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
+                    self.needsUpdate = True
 def compareTuple(t1, t2):
     x = t1[0] - t2[0]
     y = t1[1] - t2[1]
@@ -380,8 +416,8 @@ class botPlayer(player):
     def isHuman(self):
         return False
     
-    def __init__(self, player1, difficulty, aBoard):
-        super().__init__(player1, aBoard)
+    def __init__(self, player1, difficulty, aBoard, aHeight):
+        super().__init__(player1, aBoard, aHeight)
         self.started = False
         self.difficulty = difficulty
 

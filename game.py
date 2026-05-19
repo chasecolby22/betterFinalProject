@@ -21,6 +21,7 @@ class game(board):
         self.pieceList = pieceList
         self.activePlayer = ""
         self.turns = 0
+        
         self.movesString = ""
         self.needsMenu = False
         self.winnerPrinted = False
@@ -45,11 +46,8 @@ class game(board):
         self.runBoth(lambda a: self.attachPieces(a))
 
     def getNeedsUpdate(self):
-        if self.needsUpdate:
-            return True
-        if self.player1.needsUpdate:
-            return True
-        return self.player2.needsUpdate
+        return self.needsUpdate or self.player1.needsUpdate or self.player2.needsUpdate
+        
     
     def clearUpdateFlags(self):
        
@@ -63,9 +61,11 @@ class game(board):
 class chess(game):
 
     def handleNoEvent(self):
-        if self.gameStopped(): return False
-        if self.activePlayer.isHuman(): return False
-        self.botTurn()
+        if not self.gameRunning(): return False
+        if self.activePlayer.isHuman(): 
+            
+            self.activePlayer.handleNoEvent()
+        else: self.botTurn()
         return True
 
     def collidesSpecial(self, aPos):
@@ -98,7 +98,7 @@ class chess(game):
 
     @classmethod
     def test(cls):
-        return [[pawn, pawn, pawn, pawn], [rook, queen, king, rook]]
+        return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, rook, knight, knight, bishop, bishop, queen, queen, king, queen, bishop, bishop, knight, knight, rook, rook]]
     
     def __init__(self, width, height, pieceList, wantsBot):
 
@@ -107,6 +107,8 @@ class chess(game):
         
         self.botString = ""
         self.knowsCheck = False
+        self.theGameIsStopped = False
+        self.knowsGameIsStopped = False
         self.enPassantTile = ""
         self.width = width
         self.height = height
@@ -262,6 +264,7 @@ class chess(game):
         self.needsUpdate = True
         print("Turn " + str(math.ceil(self.turns/2)) + ": The " + self.getNonActivePlayer().name() + "bot choose:  " + botString)
         
+        time.sleep(.25)
         return True
 
     def drawBot(self):
@@ -330,7 +333,16 @@ class chess(game):
         dp = self.activePlayer
         return dp.hasMove(self.grabPlayerTiles(dp), self.grabPlayerTiles(self.getNonActivePlayer()))
     
+
+    def gameRunning(self):
+        if not self.knowsGameIsStopped:
+       
+            self.theGameIsStopped = self.gameStopped()
+            self.knowsGameIsStopped = True
+        return not self.theGameIsStopped
+    
     def gameStopped(self):
+
         if len(self.player1.pieces) == 1 and len(self.player2.pieces) == 1:
             if not self.winnerPrinted:
                 print("The game was a stalemate")
@@ -470,5 +482,6 @@ class chess(game):
         if aPiece.isKing(): self.activePlayer.kingTile = destTile
         self.switchPlayer()
         self.knowsCheck = False
+        self.knowsGameIsStopped = False
         self.oldBotString = self.botString
         self.needsUpdate = True
