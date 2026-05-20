@@ -7,6 +7,9 @@ def theyAreChecking(aListOfTiles, aKingTile):
         if item.piece.canMove(item, aKingTile, None):
             return True
     return False
+        
+def checkSlide(aTile, i, j):
+        return aTile.getNeighbor(i).slide(i, j)
 
 class dumbPiece(pygame.sprite.Sprite):
     def __init__(self, anX, aY, aColor, aHeight):
@@ -37,9 +40,7 @@ class dumbPiece(pygame.sprite.Sprite):
         
     def collidepoint(self, aPos):
         self.rect.collidepoint(aPos)
-        
-def checkSlide(aTile, i, j):
-        return aTile.getNeighbor(i).slide(i, j)
+
    
 
 class piece(dumbPiece):
@@ -121,7 +122,7 @@ class piece(dumbPiece):
         if not tile or tile.isNullTile():
             return False
         
-        if tile.isEmpty() or tile.getColor() != self.color:
+        if not self.defaultCheck(tile):
             return True
         return False
         
@@ -136,6 +137,30 @@ class piece(dumbPiece):
         return moves
         
 
+    def buildMoves(self, moves, fromTile, i, op, kingTile):
+        j = 0
+        while True:
+            tile = checkSlide(fromTile, i, j)
+            moves = self.checkValidity(tile, moves, fromTile, op, kingTile )
+            if not tile or not tile.isEmpty():
+                break
+            j += 1
+        return moves 
+    
+    def confirmMove(self, fromTile, destTile, i):
+        j = 0
+        while True:
+            result = checkSlide(fromTile, i, j)
+            if not result:
+                break
+            if destTile == result:
+                return True
+            j += 1
+        return False
+    
+    def defaultCheck(self, destTile):
+        return not destTile.isEmpty() and destTile.getColor() == self.color
+
 class dumbKnight(dumbPiece):
     def name(self):
         return "knight"
@@ -147,11 +172,8 @@ class knight(piece):
 
     def canMove(self, fromTile, destTile, _):
         
-        if not destTile.isEmpty() and destTile.getColor() == self.color:
-            return False
-        for tile in fromTile.rookNeighbors:
-            if tile == destTile:
-                return default(destTile)
+        if self.defaultCheck(destTile): return False
+        if destTile in fromTile.rookNeighbors: return default(destTile)
         return False
     
     def findMoves(self, fromTile, op, kingTile):
@@ -174,20 +196,14 @@ class rook(piece):
 
     def canMove(self, fromTile, destTile, _):
         
-        if not destTile.isEmpty() and destTile.getColor() == self.color:
+        if self.defaultCheck(destTile):
             return False
         for i in range(8):
             if i % 2 == 1:
                 continue
             else:
-                j = 0
-                while True:
-                    result = checkSlide(fromTile, i, j)
-                    if not result:
-                        break
-                    if result == destTile:
-                        return default(destTile)
-                    j += 1
+                if self.confirmMove(fromTile, destTile, i):
+                    return default(destTile)
         return False 
     
     def findMoves(self, fromTile, op, kingTile):
@@ -196,14 +212,8 @@ class rook(piece):
             if i % 2 == 1:
                 continue
             else:
-                j = 0
-                while True:
-                
-                    tile = checkSlide(fromTile, i, j)
-                    moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
-                    if not tile or not tile.isEmpty():
-                        break
-                    j += 1
+                moves = self.buildMoves(moves, fromTile, i, op, kingTile)
+
         return moves
     
     def name(self):
@@ -298,21 +308,15 @@ class bishop(piece):
 
     def canMove(self, fromTile, destTile, _):
         
-        if not destTile.isEmpty() and destTile.getColor() == self.color:
+        if self.defaultCheck(destTile):
             return False
         for i in range(8):
             if i % 2 == 0:
                 continue
             else:
-                j = 0
-                while True:
-                    result = checkSlide(fromTile, i, j)
-                    if not result:
-                        break
-
-                    if result == destTile:
-                        return default(destTile)
-                    j += 1
+                if self.confirmMove(fromTile, destTile, i):
+                    return default(destTile)
+                
         return False
     
     def findMoves(self, fromTile, op, kingTile):
@@ -320,16 +324,9 @@ class bishop(piece):
         for i in range(8):
             if i % 2 == 0:
                 continue
-            else:
-                j = 0
-                while True:
+            else: 
+                moves = self.buildMoves(moves, fromTile, i, op, kingTile)
                 
-                    posibileTile = checkSlide(fromTile, i, j)
-                    moves = self.checkValidity( posibileTile, moves, fromTile, op, kingTile)
-                   
-                    if not posibileTile or not posibileTile.isEmpty():
-                        break
-                    j += 1
         return moves
 
 
@@ -345,7 +342,7 @@ class king(piece):
     def canMove(self, fromTile, destTile, op):
       
         answer = default(destTile)
-        if not destTile.isEmpty() and destTile.getColor() == self.color:
+        if self.defaultCheck(destTile):
             answer = False
         for i in range(8):
             if fromTile.getNeighbor(i) == destTile and answer:
@@ -435,34 +432,21 @@ class queen(piece):
     def name(self):
         return "queen"
 
-    
     def canMove(self, fromTile, destTile, _):
         
-        if not destTile.isEmpty() and destTile.getColor() == self.color:
+        if self.defaultCheck(destTile):
             return False
         for i in range(8):
-            j = 0
-            while True:
-                result = checkSlide(fromTile, i, j)
-                if not result:
-                    break
-                if result == destTile:
-                    return default(destTile)
-                j += 1
+            if self.confirmMove(fromTile, destTile, i):
+                return default(destTile)
         return False
     
     def findMoves(self, fromTile, op, kingTile):
         moves = []
         
         for i in range(8):
-            j = 0
-            while True:
-
-                tile = checkSlide(fromTile, i, j)
-                moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
-                if not tile or not tile.isEmpty():
-                    break
-                j += 1
+            moves = self.buildMoves(moves, fromTile, i, op, kingTile)
+            
         return moves
 
 def default(aTile):

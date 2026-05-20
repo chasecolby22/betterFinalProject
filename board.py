@@ -54,8 +54,8 @@ class nullColumn():
 class column():
     
     def setTile(self, aTile, aPos):
-        for i in range(8):
-            self.tiles[aPos].rect = aTile
+        
+        self.tiles[aPos].rect = aTile
         
     def __init__(self, i, height):
         self.tiles = []
@@ -142,17 +142,11 @@ class tile():
     def isEmpty(self):
         return self.piece == "EMPTY"
     
-    def getPlayer(self):
-        
-        if self.isEmpty():
-            return "null"
-        return self.piece.player
-    
     def hasMoved(self):
         if self.isEmpty():
             return True
-        else:
-            return self.piece.getHasMoved()
+        
+        return self.piece.getHasMoved()
 
     def __init__(self, i, j):
         self.piece = "EMPTY"
@@ -172,10 +166,10 @@ class tile():
         return (self.x, self.y)
     
     def getColor(self):
-        piece = self.getPiece()
-        if piece == "EMPTY":
+       
+        if self.isEmpty():
             return "NULL"
-        return piece.getColor()
+        return self.piece.getColor()
     
     def slide(self, dir, i):
         if i == 0:

@@ -281,8 +281,8 @@ class humanPlayer(player):
                     if not self.checkSelection(aTile, botString, op)[0]:
                         if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
-                        self.validPiece = False
                         if self.validPiece: self.validPieceTile.rect.reset()
+                        self.validPiece = False
                         self.validPieceTile = ""
                         self.validPieceOgPos = ""
                         
@@ -306,6 +306,7 @@ class humanPlayer(player):
                             self.validPieceOgPos = ""
                             self.posibleMoves = ""
                             self.clearHighlight()
+                            
                             self.validPiece = self.findPosibilities(aTile, op)
                             if self.validPiece:
                                 self.validPieceTile = aTile
