@@ -100,11 +100,12 @@ class onScreenChar():
         tileFont = pygame.font.SysFont("Arial", aTileSize)
         self.letter = tileFont.render(char, True, black)
         self.pos = (100 + x * aTileSize + aTileSize / 2, 50 + y * aTileSize + aTileSize / 2)
+        self.rect = self.letter.get_rect(center=self.pos)
         self.sur = aSur
         self.draw()
     
     def draw(self):
-        self.sur.blit(self.letter, self.letter.get_rect(center=self.pos))
+        self.sur.blit(self.letter, self.rect)
 
 class gameScreen():
 
