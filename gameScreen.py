@@ -5,11 +5,14 @@ white = (255, 255, 255)
 black = (0, 0, 0)
 pink = (255, 182, 193)
 blue = (173, 216, 230)
+
 font = pygame.font.SysFont("Arial", 42)
-surs = dict()
+
+
 class onScreenTile(pygame.Rect):
-    def __init__(self, aRect, aPos, aSurface, aColor):
+    def __init__(self, aRect, aPos, aSurface, aColor, aTileSize):
         super().__init__(aRect[0], aRect[1], aRect[2], aRect[3])
+        self.tileSize = aTileSize
         self.pos = aPos
         self.color = aColor
         self.sur = aSurface
@@ -35,32 +38,32 @@ class onScreenTile(pygame.Rect):
         pygame.draw.rect(self.sur, self.border, self, width = self.bwidth)
 
         if self.border != black:
-            if self.border not in surs.keys():
+           
 
             
-                surr = pygame.Surface((75, 75), pygame.SRCALPHA)
-                surr.fill((self.border[0], self.border[1], self.border[2], 75))
-                surs[self.border] = surr
+            surr = pygame.Surface((self.tileSize, self.tileSize), pygame.SRCALPHA)
+            surr.fill((self.border[0], self.border[1], self.border[2], self.tileSize))
+            
                 
-            self.sur.blit(surs[self.border], self.topleft)
+            self.sur.blit(surr, self.topleft)
         if self.circleColor != None:
-            pygame.draw.circle(self.sur, self.circleColor, self.center, 25)
+            pygame.draw.circle(self.sur, self.circleColor, self.center, self.tileSize / 3)
 
 class button(pygame.Rect):
-    def __init__(self, aRectSpec, aText, aScreen, aLambda, aColor):
+    def __init__(self, aRectSpec, aText, aSurface, aLambda, aColor):
         super().__init__(aRectSpec[0], aRectSpec[1], aRectSpec[2], aRectSpec[3])
         self.text = font.render(aText, True, black)
         self.text_rect = self.text.get_rect(center=self.center)
-        
+        self.sur = aSurface
         self.color = aColor
         self.oldColor = ""
         
         self.myLambda = aLambda
         
-    def drawThing(self, aScreen):
+    def draw(self):
 
-        pygame.draw.rect(aScreen.sur, self.color, self)
-        aScreen.sur.blit(self.text, self.text_rect)
+        pygame.draw.rect(self.sur, self.color, self)
+        self.sur.blit(self.text, self.text_rect)
         
         
 
@@ -85,16 +88,18 @@ class button(pygame.Rect):
                         self.oldColor = ""
                         aScreen.needsUpdate = True
         elif aEvent.type == pygame.MOUSEBUTTONUP:
-            if self.collidepoint(aEvent.pos):
-                
-                self.myLambda()
-                clicked =  True
+            if aEvent.button == 1:
+                if self.collidepoint(aEvent.pos):
+                    
+                    self.myLambda()
+                    clicked =  True
         return clicked, handled
         
 class onScreenChar():
-    def __init__(self, char, x, y, aSur):
-        self.letter = font.render(char, True, black)
-        self.pos = (125 + x * 75, 60 + y * 75)
+    def __init__(self, char, x, y, aSur, aTileSize):
+        tileFont = pygame.font.SysFont("Arial", aTileSize)
+        self.letter = tileFont.render(char, True, black)
+        self.pos = (110 + x * aTileSize, 50 + y * aTileSize)
         self.sur = aSur
         self.draw()
     
@@ -128,6 +133,7 @@ class gameScreen():
         self.specialsprites = pygame.sprite.Group()
         self.drawnBoard = False
         self.menuDrawn = False
+        self.tileSize = 75
         self.needsUpdate = False
         self.continueButton = None
         self.tiles = []
@@ -136,7 +142,7 @@ class gameScreen():
 
     def initializeGame(self, aLambda):
         array = aLambda()
-        self.game = chess(array[0], array[1], array[2], array[3])
+        self.game = chess(array[0], array[1], array[2], array[3], self.tileSize)
         self.width = array[0]
         self.height = array[1]
 
@@ -152,9 +158,9 @@ class gameScreen():
         self.chars = []
         self.tiles = []
         for i in range(self.width):
-            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.sur))
+            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.sur, self.tileSize))
         for i in range(self.height):
-            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.sur))
+            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.sur, self.tileSize))
         for item in self.chars:
             item.draw()
         for i in range(self.height):
@@ -168,7 +174,7 @@ class gameScreen():
                 if j != 7:
                     dw = not dw
                     
-                tile = onScreenTile((100+j*75, 50+i*75, 75, 75), (j, (self.height-1)-i), self.sur, color)
+                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), (j, (self.height-1)-i), self.sur, color, self.tileSize)
                 tile.draw()
                 row.append(tile)
             self.tiles.append(row)
@@ -178,7 +184,7 @@ class gameScreen():
         
     def drawBoard(self):
         
-        pygame.draw.rect(self.sur, black, pygame.Rect(99, 50-1, 75 * self.width + 2, 75 * self.height + 2), width=2)
+        pygame.draw.rect(self.sur, black, pygame.Rect(99, 50-1, self.tileSize * self.width + 2, self.tileSize * self.height + 2), width=2)
        
         
         if not self.drawnBoard:
@@ -206,7 +212,7 @@ class gameScreen():
     
             
             self.drawSprites()
-            if self.continueButton != None: self.continueButton.drawThing(self)
+            if self.continueButton != None: self.continueButton.draw()
             pygame.display.update()
             self.game.clearUpdateFlags()
 
@@ -217,7 +223,7 @@ class gameScreen():
         
 
     def returnButton(self, anX, aText, aLambda):
-        return button((anX, 50, 200, 100), aText, self, aLambda, (0, 255, 255))
+        return button((anX, 50, 200, 100), aText, self.sur, aLambda, (0, 255, 255))
     
     def startBotGame(self):
         
@@ -243,12 +249,12 @@ class gameScreen():
     def drawStartScreen(self):
         if self.needsUpdate:
             
-            self.sur = pygame.display.set_mode((1000, 400))
+            
             self.sur.fill(white)
             
             for item in self.buttons:
                 
-                item.drawThing(self)
+                item.draw()
             pygame.display.update()
             self.needsUpdate = False
 
@@ -277,7 +283,7 @@ class gameScreen():
         for butt in self.buttons:
             newclicked, newhandled = butt.handleEvent(anEvent, self)
             if not clicked:
-                if newclicked: print("hi")    
+                  
                 clicked = newclicked
             
             if not handled:
@@ -288,6 +294,19 @@ class gameScreen():
         clicked, handled = self.continueButton.handleEvent(anEvent, self)
         return self.endMenuHandle(handled, clicked)
         
+    def decrementTileSize(self):
+        if self.tileSize != 10:
+            self.tileSize -= 1
+            self.drawnBoard = False
+            self.game.updateTileSize(self.tileSize)
+            self.makeMainScreen()
+
+    def incrementTileSize(self):
+        if self.tileSize != 150:
+            self.tileSize += 1
+            self.drawnBoard = False
+            self.game.updateTileSize(self.tileSize)
+            self.makeMainScreen()
         
     def startNewGame(self):
         self.setUpStartScreen()
@@ -311,8 +330,15 @@ class gameScreen():
                     self.game.handleNoEvent()
                     
             for event in eventList:
+                
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.MOUSEWHEEL:
+                    
+                    if event.dict["y"] == -1:
+                        self.decrementTileSize()
+                    else:
+                        self.incrementTileSize()
                 else:
                     
                     if not gameStarted:
@@ -360,7 +386,7 @@ class gameScreen():
                                     
                                     gameOver = True
                                     
-                                    self.continueButton = button((self.width*75+175, 50+(self.height - 3)*75, 200, 50), "New Game", self, lambda: self.startNewGame(), (0, 100, 0))
+                                    self.continueButton = button((self.width*self.tileSize+175, 50+(self.height - 3)*self.tileSize, 200, 50), "New Game", self.sur, lambda: self.startNewGame(), (0, 100, 0))
                                     self.needsUpdate = True
                                     
                                 
@@ -373,7 +399,7 @@ class gameScreen():
                 
 
     def makeMainScreen(self):
-        self.sur = pygame.display.set_mode((self.width*75 + 400, self.height*75 + 200))
+        self.sur = pygame.display.set_mode((self.width*self.tileSize + 400, self.height*self.tileSize + 200))
 
 def isMouseEvent(aEvent):
-    return aEvent.type == pygame.MOUSEBUTTONDOWN or aEvent.type == pygame.MOUSEBUTTONUP or aEvent.type == pygame.MOUSEMOTION
+    return aEvent.type == pygame.MOUSEMOTION or aEvent.type == pygame.MOUSEBUTTONDOWN or aEvent.type == pygame.MOUSEBUTTONUP

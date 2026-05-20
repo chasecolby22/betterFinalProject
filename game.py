@@ -6,6 +6,11 @@ from players import *
 
 class game(board):
 
+    def updateTileSize(self, newTileSize):
+        self.player1.updateTileSize(newTileSize)
+        self.player2.updateTileSize(newTileSize)
+        self.needsUpdate = True
+
     def gatherSpecialSprites(self, aGroup):
         for item in self.specialPieces:
             aGroup.add(item)
@@ -14,9 +19,10 @@ class game(board):
     def gatherBaseSprites(self, aGroup):
         self.runBoth(lambda a: a.addPieces(aGroup) )
         
-    def __init__(self, width, height, pieceList):
+    def __init__(self, width, height, pieceList, tileSize):
         super().__init__(width, height)
         self.player1 = ""
+        self.tileSize = tileSize
         self.player2 = ""
         self.pieceList = pieceList
         self.activePlayer = ""
@@ -107,10 +113,10 @@ class chess(game):
     def testPieceList(cls):
         return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, rook, knight, knight, bishop, bishop, queen, queen, king, queen, bishop, bishop, knight, knight, rook, rook]]
     
-    def __init__(self, width, height, pieceList, wantsBot):
+    def __init__(self, width, height, pieceList, wantsBot, tileSize):
 
         
-        super().__init__(width, height, pieceList)
+        super().__init__(width, height, pieceList, tileSize)
         
         self.botString = ""
         self.knowsCheck = False
@@ -216,6 +222,30 @@ class chess(game):
     
     def bbotChoice(self):
         return self.botChoice
+    
+    def createPlayer1(self, aDifficulty = 0):
+        if aDifficulty == 0:
+            self.createHumanPlayer1()
+        else:
+            self.createBotPlayer1(aDifficulty)
+    
+    def createPlayer2(self, aDifficulty = 0):
+        if aDifficulty == 0:
+            self.createHumanPlayer2()
+        else:
+            self.createBotPlayer2(aDifficulty)
+
+    def createHumanPlayer1(self):
+        self.player1 = humanPlayer(True, self.pieceList, self.height, self.tileSize)
+
+    def createHumanPlayer2(self):
+        self.player2 = humanPlayer(False, self.pieceList, self.height, self.tileSize)
+
+    def createBotPlayer1(self, aDifficulty):
+        self.player1 = botPlayer(True, aDifficulty, self.pieceList, self.height, self.tileSize)
+
+    def createBotPlayer2(self, aDifficulty):
+        self.player2 = botPlayer(False, aDifficulty, self.pieceList, self.height, self.tileSize)
        
     def startGame(self, player1dif, player2dif):
         
@@ -224,22 +254,16 @@ class chess(game):
         self.turns = 0
         self.movesString = ""
         self.botString = ""
-
+        
         if not self.botStarted:
             print("Sorry bot is sleepy")
-            self.player1 = humanPlayer(True, self.pieceList, self.height)
-            self.player2 = humanPlayer(False, self.pieceList, self.height)
-            
+            self.createHumanPlayer1()
+            self.createHumanPlayer2()
         
         else:
-            if player1dif != 0:
-                self.player1 = botPlayer(True, player1dif, self.pieceList, self.height)
-            else:
-                self.player1 = humanPlayer(True, self.pieceList, self.height)
-            if player2dif != 0:
-                self.player2 = botPlayer(False, player2dif, self.pieceList, self.height)
-            else:
-                self.player2 = humanPlayer(False, self.pieceList, self.height)
+            self.createPlayer1(player1dif)
+            self.createPlayer2(player2dif)
+            
         self.player1.start()
         self.player2.start()
         self.player1.kingTile = self.getTile(self.player1.king.x, self.player1.king.y)
@@ -416,6 +440,7 @@ class chess(game):
         else:
             self.activePlayer = self.player1
         self.turns += 1
+        
 
     def activePlayerPrompt(self, aString):
         return self.activePlayer.name() + aString
@@ -486,7 +511,7 @@ class chess(game):
             theTile = self.getTile(castle[0], self.activePlayer.row)
             self.movePiece(theTile.getPiece(), 3+magicNum, self.activePlayer.row, False, False, " ", theTile)
             self.switchPlayer()
-            self.turns -= 1
+            self.turns -= 2
 
         destTile.setPiece(aPiece)
         

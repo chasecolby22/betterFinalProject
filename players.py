@@ -14,7 +14,11 @@ class cursor(pygame.sprite.Sprite):
 
 class player():
   
-    
+    def updateTileSize(self, newTileSize):
+        self.tileSize = newTileSize
+        for item in self.pieces:
+            item.updateTileSize(newTileSize)
+        
     def hasMove(self, listOfTiles, op):
         for i in range(len(self.pieces)):
             
@@ -25,12 +29,12 @@ class player():
     
     def start(self):
         for i in range(len(self.pieceList[0])) :
-            item = self.pieceList[0][i](i, self.pawnsRow, self.color, self.height)
+            item = self.pieceList[0][i](i, self.pawnsRow, self.color, self.height, self.tileSize)
             if item.isKing(): self.king = item
             self.pieces.append(item)
             
         for i in range(len(self.pieceList[1])):
-            item = self.pieceList[1][i](i, self.row, self.color, self.height)
+            item = self.pieceList[1][i](i, self.row, self.color, self.height, self.tileSize)
             if item.isKing() : 
                 if self.king == "EMPTY":
                     self.king = item
@@ -81,14 +85,14 @@ class player():
         for item in self.pieces:
             aGroup.add(item)
 
-    def __init__(self, player1, pieceList, height):
+    def __init__(self, player1, pieceList, height, tileSize):
         self.king = "EMPTY"
         self.pieceList = pieceList
         self.kingTile = ""
         self.height = height
         self.validPieceTile = ""
         self.validPieceOgPos = ""
-        
+        self.tileSize = tileSize
         self.highlightedTile = ""
         self.enPassantTile = ""
         self.tempMoveString = ""
@@ -241,98 +245,99 @@ class humanPlayer(player):
         
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
             
-            
-            if aTile :
-                if not self.validPiece:
-                    
-                    for piece in self.pieces:
-                        pos = aTile.getPos()
-                        if piece.getPos() == pos:
-                            
-                            self.validPiece = piece
-                            
-                            self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*((self.height -1)-pos[1]) + 75/2)
-                            self.validPieceTile = aTile
-                            self.dragging = False
-                            self.mouseDown = True
-                            self.mouseDownTime = time.time()
-                            self.needsUpdate = True
-                            self.originalMousePos = aEvent.pos
+            if aEvent.button == 1:
+                if aTile :
+                    if not self.validPiece:
+                        
+                        for piece in self.pieces:
+                            pos = aTile.getPos()
+                            if piece.getPos() == pos:
+                                
+                                self.validPiece = piece
+                                
+                                self.validPieceOgPos = (100+self.tileSize*pos[0]+self.tileSize/2, 50 + self.tileSize*((self.height -1)-pos[1]) + self.tileSize/2)
+                                self.validPieceTile = aTile
+                                self.dragging = False
+                                self.mouseDown = True
+                                self.mouseDownTime = time.time()
+                                self.needsUpdate = True
+                                self.originalMousePos = aEvent.pos
 
-                else:
-                    if self.validPieceTile == aTile:
-                        self.dragging = True
-                        pygame.mouse.set_cursor(pygame.cursors.diamond)
+                    else:
+                        if self.validPieceTile == aTile:
+                            self.dragging = True
+                            pygame.mouse.set_cursor(pygame.cursors.diamond)
                
 
         elif aEvent.type == pygame.MOUSEBUTTONUP:
-            if aTile:
-                wasClick = True
-                if self.dragging:
-                    self.dragging = False
-                    wasClick = False
-                else:
-                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                self.mouseDown = False
-                self.originalMousePos = ""
-                
-                if not wasClick:
-
-                    if not self.checkSelection(aTile, botString, op)[0]:
-                        if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
-                        self.needsUpdate = True
-                        if self.validPiece: self.validPieceTile.rect.reset()
-                        self.validPiece = False
-                        self.validPieceTile = ""
-                        self.validPieceOgPos = ""
-                        
-                        
-                        self.clearHighlight()
-                        self.tempTile = ""
-                        
+            if aEvent.button == 1:
+                if aTile:
+                    wasClick = True
+                    if self.dragging:
+                        self.dragging = False
+                        wasClick = False
                     else:
-                        self.clearHighlight()
-                        done = True
-                        
-                else:
-                    if self.validPiece and self.validPiece.getPos() != aTile.getPos():
-                        array = self.checkSelection(aTile, botString, op)
-                        if not array[0]:
-                            if array[1]: thePromotion = True
-                            self.validPiece.setPos(self.validPieceOgPos)
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                    self.mouseDown = False
+                    self.originalMousePos = ""
+                    
+                    if not wasClick:
+
+                        if not self.checkSelection(aTile, botString, op)[0]:
+                            if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                             self.needsUpdate = True
-                            self.validPieceTile.rect.reset()
+                            if self.validPiece: self.validPieceTile.rect.reset()
+                            self.validPiece = False
                             self.validPieceTile = ""
                             self.validPieceOgPos = ""
-                            self.posibleMoves = ""
-                            self.clearHighlight()
                             
-                            self.validPiece = self.findPosibilities(aTile, op)
-                            if self.validPiece:
-                                self.validPieceTile = aTile
-                                pos = aTile.getPos()
-                                self.validPieceOgPos = (100+75*pos[0]+75/2, 50 + 75*((self.height -1)-pos[1]) + 75/2)
-                                
-                                
+                            
+                            self.clearHighlight()
                             self.tempTile = ""
-
+                            
                         else:
-                            
                             self.clearHighlight()
-                            
                             done = True
+                            
+                    else:
+                        if self.validPiece and self.validPiece.getPos() != aTile.getPos():
+                            array = self.checkSelection(aTile, botString, op)
+                            if not array[0]:
+                                if array[1]: thePromotion = True
+                                self.validPiece.setPos(self.validPieceOgPos)
+                                self.needsUpdate = True
+                                self.validPieceTile.rect.reset()
+                                self.validPieceTile = ""
+                                self.validPieceOgPos = ""
+                                self.posibleMoves = ""
+                                self.clearHighlight()
+                                
+                                self.validPiece = self.findPosibilities(aTile, op)
+                                if self.validPiece:
+                                    self.validPieceTile = aTile
+                                    pos = aTile.getPos()
+                                    self.validPieceOgPos = (100+self.tileSize*pos[0]+self.tileSize/2, 50 + self.tileSize*((self.height -1)-pos[1]) + self.tileSize/2)
+                                    
+                                    
+                                self.tempTile = ""
 
-            else:
-                if self.validPiece and self.dragging:
-                    self.validPiece.setPos(self.validPieceOgPos)
-                    self.needsUpdate = True
-                    self.validPiece = False
-                    self.validPieceOgPos = ""
-                    self.validPieceTile.rect.reset()
-                    self.validPieceTile = ""
-                    self.posibleMoves = ""
-                    self.clearHighlight()
-                    self.dragging = False
+                            else:
+                                
+                                self.clearHighlight()
+                                
+                                done = True
+
+                else:
+                    if self.validPiece and self.dragging:
+                        self.validPiece.setPos(self.validPieceOgPos)
+                        self.needsUpdate = True
+                        self.validPiece = False
+                        self.validPieceOgPos = ""
+                        self.validPieceTile.rect.reset()
+                        self.validPieceTile = ""
+                        self.posibleMoves = ""
+                        self.clearHighlight()
+                        self.dragging = False
 
         elif aEvent.type == pygame.MOUSEMOTION:
             
@@ -419,8 +424,8 @@ class botPlayer(player):
     def isHuman(self):
         return False
     
-    def __init__(self, player1, difficulty, aBoard, aHeight):
-        super().__init__(player1, aBoard, aHeight)
+    def __init__(self, player1, difficulty, aPieceList, aHeight, tileSize):
+        super().__init__(player1, aPieceList, aHeight, tileSize)
         self.started = False
         self.difficulty = difficulty
 

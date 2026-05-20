@@ -12,13 +12,19 @@ def checkSlide(aTile, i, j):
         return aTile.getNeighbor(i).slide(i, j)
 
 class dumbPiece(pygame.sprite.Sprite):
-    def __init__(self, anX, aY, aColor, aHeight):
+
+    def updateTileSize(self, newTileSize):
+        self.tileSize = newTileSize
+        self.move(self.x, self.y)
+        self.changeImage()
+    
+    def __init__(self, anX, aY, aColor, aHeight, tileSize):
         super().__init__()
         self.x = anX
         self.y = aY
         self.coords = ""
         self.color = aColor
-        
+        self.tileSize = tileSize
         self.height = aHeight
         self.image = False
         self.move(anX, aY)
@@ -31,12 +37,18 @@ class dumbPiece(pygame.sprite.Sprite):
             self.changeImage()
         self.x = anX
         self.y = aY
-        self.coords = (100 + (75*anX), 50 + (75*((self.height - 1)-aY)))
+        self.coords = (100 + (self.tileSize*anX), 50 + (self.tileSize*((self.height - 1)-aY)))
+        
         self.rect = self.image.get_rect(topleft = self.coords)
 
     def changeImage(self):
+        transform = self.tileSize / 75
         anImage = "./" + self.color + "/" + self.name() + ".png"
         self.image = pygame.image.load(anImage).convert_alpha()
+        if transform != 1: self.image = pygame.transform.smoothscale_by(self.image, transform)
+        
+        
+        
         
     def collidepoint(self, aPos):
         self.rect.collidepoint(aPos)
@@ -71,8 +83,8 @@ class piece(dumbPiece):
         self.x = anX
         self.y = aY
 
-    def __init__(self, anX, aY, aColor, aHeight ):
-        super().__init__(anX, aY, aColor, aHeight)
+    def __init__(self, anX, aY, aColor, aHeight, aTileSize ):
+        super().__init__(anX, aY, aColor, aHeight, aTileSize)
         
         
         self.hasMoved = False
