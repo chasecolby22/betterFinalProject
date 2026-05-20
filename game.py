@@ -7,6 +7,9 @@ from players import *
 class game(board):
 
     def updateTileSize(self, newTileSize):
+        self.tileSize = newTileSize
+        for item in self.specialPieces:
+            item.updateTileSize(newTileSize)
         self.player1.updateTileSize(newTileSize)
         self.player2.updateTileSize(newTileSize)
         self.needsUpdate = True
@@ -88,7 +91,7 @@ class chess(game):
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
             else:
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        elif anEvent.type == pygame.MOUSEBUTTONUP:
+        elif anEvent.type == pygame.MOUSEBUTTONUP and anEvent.button == 1:
             item = self.collidesSpecial(anEvent.pos)
             if item:
                 self.setPromotion(item.pro())
@@ -184,10 +187,10 @@ class chess(game):
         array = [7, 5, 3, 1]
         if self.height < 5:
             array = [3, 2, 1, 0]
-        self.specialPieces.append(dumbQueen(self.width+1, array[0], self.color(), self.height))
-        self.specialPieces.append(dumbRook(self.width+1, array[1], self.color(), self.height))
-        self.specialPieces.append(dumbBishop(self.width+1, array[2], self.color(), self.height))
-        self.specialPieces.append(dumbKnight(self.width+1, array[3], self.color(), self.height))
+        self.specialPieces.append(dumbQueen(self.width+1, array[0], self.color(), self.height, self.tileSize))
+        self.specialPieces.append(dumbRook(self.width+1, array[1], self.color(), self.height, self.tileSize))
+        self.specialPieces.append(dumbBishop(self.width+1, array[2], self.color(), self.height, self.tileSize))
+        self.specialPieces.append(dumbKnight(self.width+1, array[3], self.color(), self.height, self.tileSize))
         self.needsUpdate = True
 
     

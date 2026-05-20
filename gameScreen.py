@@ -99,12 +99,12 @@ class onScreenChar():
     def __init__(self, char, x, y, aSur, aTileSize):
         tileFont = pygame.font.SysFont("Arial", aTileSize)
         self.letter = tileFont.render(char, True, black)
-        self.pos = (110 + x * aTileSize, 50 + y * aTileSize)
+        self.pos = (100 + x * aTileSize + aTileSize / 2, 50 + y * aTileSize + aTileSize / 2)
         self.sur = aSur
         self.draw()
     
     def draw(self):
-        self.sur.blit(self.letter, self.pos)
+        self.sur.blit(self.letter, self.letter.get_rect(center=self.pos))
 
 class gameScreen():
 
@@ -190,7 +190,7 @@ class gameScreen():
     def drawBoard(self):
         
         pygame.draw.rect(self.sur, black, pygame.Rect(99, 50-1, self.tileSize * self.width + 2, self.tileSize * self.height + 2), width=2)
-        onScreenChar(str(math.ceil((1+self.game.turns)/2)), self.width + 1, self.height - 3, self.sur, self.tileSize).draw()
+        onScreenChar(str(math.ceil((1+self.game.turns)/2)), self.width//2, self.height + 1, self.sur, self.tileSize).draw()
         
         if not self.drawnBoard:
             self.literallyDrawBoard()
