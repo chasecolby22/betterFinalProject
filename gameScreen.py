@@ -1,5 +1,4 @@
-from game import chess
-import pygame
+from game import *
 
 pygame.init()
 white = (255, 255, 255)
@@ -92,8 +91,15 @@ class button(pygame.Rect):
                 clicked =  True
         return clicked, handled
         
-
-
+class onScreenChar():
+    def __init__(self, char, x, y, aSur):
+        self.letter = font.render(char, True, black)
+        self.pos = (125 + x * 75, 60 + y * 75)
+        self.sur = aSur
+        self.draw()
+    
+    def draw(self):
+        self.sur.blit(self.letter, self.pos)
 
 class gameScreen():
 
@@ -141,43 +147,48 @@ class gameScreen():
     def addSprite(self, aSprite):
         self.allsprites.add(aSprite)
 
+    def literallyDrawBoard(self):
+        dw = True
+        self.chars = []
+        self.tiles = []
+        for i in range(self.width):
+            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.sur))
+        for i in range(self.height):
+            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.sur))
+        for item in self.chars:
+            item.draw()
+        for i in range(self.height):
+            row = []
+            for j in range(self.width):
+                color = pink
+                if dw:
+                    
+                    color = blue
+                
+                if j != 7:
+                    dw = not dw
+                    
+                tile = onScreenTile((100+j*75, 50+i*75, 75, 75), (j, (self.height-1)-i), self.sur, color)
+                tile.draw()
+                row.append(tile)
+            self.tiles.append(row)
+        self.game.updateTiles(self.tiles)
+        
+        self.drawnBoard = True
+        
     def drawBoard(self):
         
         pygame.draw.rect(self.sur, black, pygame.Rect(99, 50-1, 75 * self.width + 2, 75 * self.height + 2), width=2)
        
-        for i in range(self.width):
-            letter = font.render(chr(i+ ord("A")), True, black)
-            self.sur.blit(letter, ((125 + i * 75), 50+10 + self.height* 75))
-        for i in range(self.height):
-            letter = font.render(str(self.width - i), True, black)
-            self.sur.blit(letter, ((125+self.width*75), 50+10 + (i * 75)))
+        
         if not self.drawnBoard:
-            dw = True
-            
-            
-            for i in range(self.height):
-                row = []
-                for j in range(self.width):
-                    color = pink
-                    if dw:
-                        
-                        color = blue
-                    
-                    if j != 7:
-                        dw = not dw
-                        
-                    tile = onScreenTile((100+j*75, 50+i*75, 75, 75), (j, (self.height-1)-i), self.sur, color)
-                    tile.draw()
-                    row.append(tile)
-                self.tiles.append(row)
-            self.game.updateTiles(self.tiles)
-            
-            self.drawnBoard = True
+            self.literallyDrawBoard()
         else:
             for row in self.tiles:
                 for item in row:
                     item.draw()
-
+            for item in self.chars:
+                item.draw()
   
     
     def reset(self):
@@ -295,9 +306,9 @@ class gameScreen():
                 
             eventList = pygame.event.get()
             if len(eventList) == 0:
-                if gameStarted and self.game.handleNoEvent():
+                if gameStarted:
                     
-                    self.updateScreen()
+                    self.game.handleNoEvent()
                     
             for event in eventList:
                 if event.type == pygame.QUIT:
@@ -331,7 +342,7 @@ class gameScreen():
                                     self.allsprites.empty()
                                     
                                     
-                                self.updateScreen()
+                                
                                     
                             else:
                                 if self.game.gameRunning():
@@ -345,19 +356,13 @@ class gameScreen():
                                             
                                             self.game.moveHumanPiece()
                                         
-
-                                    else:
-                                        
-                                        self.game.botTurn()
-                                        self.updateScreen()
-                                        
                                 else:
                                     
                                     gameOver = True
                                     
                                     self.continueButton = button((self.width*75+175, 50+(self.height - 3)*75, 200, 50), "New Game", self, lambda: self.startNewGame(), (0, 100, 0))
                                     self.needsUpdate = True
-                                    self.updateScreen()
+                                    
                                 
                                 
                                 

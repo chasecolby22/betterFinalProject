@@ -38,9 +38,12 @@ class dumbPiece(pygame.sprite.Sprite):
     def collidepoint(self, aPos):
         self.rect.collidepoint(aPos)
         
-       
+def checkSlide(aTile, i, j):
+        return aTile.getNeighbor(i).slide(i, j)
+   
 
 class piece(dumbPiece):
+    
     
     def getColor(self):
         return self.color
@@ -179,7 +182,7 @@ class rook(piece):
             else:
                 j = 0
                 while True:
-                    result = fromTile.getNeighbor(i).slide(i, j)
+                    result = checkSlide(fromTile, i, j)
                     if not result:
                         break
                     if result == destTile:
@@ -196,7 +199,7 @@ class rook(piece):
                 j = 0
                 while True:
                 
-                    tile = fromTile.getNeighbor(i).slide(i, j)
+                    tile = checkSlide(fromTile, i, j)
                     moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
                     if not tile or not tile.isEmpty():
                         break
@@ -303,7 +306,7 @@ class bishop(piece):
             else:
                 j = 0
                 while True:
-                    result = fromTile.getNeighbor(i).slide(i, j)
+                    result = checkSlide(fromTile, i, j)
                     if not result:
                         break
 
@@ -321,7 +324,7 @@ class bishop(piece):
                 j = 0
                 while True:
                 
-                    posibileTile = fromTile.getNeighbor(i).slide(i, j)
+                    posibileTile = checkSlide(fromTile, i, j)
                     moves = self.checkValidity( posibileTile, moves, fromTile, op, kingTile)
                    
                     if not posibileTile or not posibileTile.isEmpty():
@@ -440,7 +443,7 @@ class queen(piece):
         for i in range(8):
             j = 0
             while True:
-                result = fromTile.getNeighbor(i).slide(i, j)
+                result = checkSlide(fromTile, i, j)
                 if not result:
                     break
                 if result == destTile:
@@ -455,7 +458,7 @@ class queen(piece):
             j = 0
             while True:
 
-                tile = fromTile.getNeighbor(i).slide(i, j)
+                tile = checkSlide(fromTile, i, j)
                 moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
                 if not tile or not tile.isEmpty():
                     break
