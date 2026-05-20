@@ -1,7 +1,31 @@
 class board():
             
 
-    
+    def print(self):
+        print()
+        for i in range(self.height):
+            print("|", end="")
+            for j in range(self.width):
+                
+                item = self.getTile(j, self.height-1 - i)
+                value = ""
+                color = 30
+                if not item.isEmpty():
+                    value = item.piece.name()
+                    if item.getColor() == "white":
+                        color = 34
+                    else:
+                        color = 31
+                       
+                while len(value) < 6:
+                    value += " "
+                print("\033[" + str(color) + "m" + value+ "\033[0m", "|", end="")
+            value = ""
+            while len(value) < self.width * 8 + 1:
+                value += "-"
+            print()
+            print(value)
+
     def __init__(self, width, height):
         self.columns = []
         self.tiles = False

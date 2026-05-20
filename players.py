@@ -142,8 +142,9 @@ class humanPlayer(player):
     def isHuman(self):
         return True
     
-    def checkSelection(self, aTile, botString, op):
+    def checkSelection(self, aTile, botString, op, gameRunning):
         thing = "abcdefgh"
+        if not gameRunning: return [False, False]
         if not self.validPiece: return [False, False]
         if not aTile: return [False, False]
         self.good = False
@@ -211,7 +212,7 @@ class humanPlayer(player):
             if len(tempMoves) != 0:
                 self.setHighlight(startTile, (0, 100, 0))
             else:
-                self.clearHighlight()
+                self.setHighlight(startTile, (255, 0, 0))
             self.posibleMoves = tempMoves
             self.needsUpdate = True
             
@@ -239,13 +240,14 @@ class humanPlayer(player):
             
         self.highlightedTile = ""
 
-    def handleEvent(self, aEvent, aTile, botString, op):
+    def handleEvent(self, aEvent, aTile, botString, op, gameRunning):
         done = False
         thePromotion = False
         
         if aEvent.type == pygame.MOUSEBUTTONDOWN:
             
             if aEvent.button == 1:
+
                 if aTile :
                     if not self.validPiece:
                         
@@ -283,7 +285,7 @@ class humanPlayer(player):
                     
                     if not wasClick:
 
-                        if not self.checkSelection(aTile, botString, op)[0]:
+                        if not self.checkSelection(aTile, botString, op, gameRunning)[0]:
                             if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
                             self.needsUpdate = True
                             if self.validPiece: self.validPieceTile.rect.reset()
@@ -301,7 +303,7 @@ class humanPlayer(player):
                             
                     else:
                         if self.validPiece and self.validPiece.getPos() != aTile.getPos():
-                            array = self.checkSelection(aTile, botString, op)
+                            array = self.checkSelection(aTile, botString, op, gameRunning)
                             if not array[0]:
                                 if array[1]: thePromotion = True
                                 self.validPiece.setPos(self.validPieceOgPos)
@@ -343,9 +345,11 @@ class humanPlayer(player):
             
             if not self.dragging:
                 if self.mouseDown:
+                    
                     if time.time() - self.mouseDownTime > .25:
-                        self.dragging = True
-                        if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
+                        if not self.dragging:
+                            self.dragging = True
+                            if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
                     
                 
                     if compareTuple(aEvent.pos, self.originalMousePos):
@@ -354,11 +358,12 @@ class humanPlayer(player):
                             if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
             
             if not self.validPiece and not self.findPosibilities(aTile, op):
-                if self.posibleMoves != "":
-                    self.posibleMoves = ""
-                    self.clearHighlight()
-                    self.needsUpdate = True
+                self.posibleMoves = ""
+                if aTile:
+                    self.setHighlight(aTile, (255, 0, 0))
+                    
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                
 
                 
                 
@@ -387,14 +392,13 @@ class humanPlayer(player):
                         self.validPieceTile.rect.highlight((139, 128, 0))
                     else:
                         self.setHighlight(aTile, (200, 200, 0))
-                    self.needsUpdate = True
+                    
                     
 
             
             if not aTile:    
                 
                 self.clearHighlight()
-
             
 
         

@@ -127,6 +127,9 @@ class gameScreen():
    
 
 
+    def clearUpdateFlags(self):
+        self.needsUpdate = False
+        self.game.clearUpdateFlags()
     def __init__(self):
         
         self.allsprites = pygame.sprite.Group()
@@ -134,6 +137,7 @@ class gameScreen():
         self.drawnBoard = False
         self.menuDrawn = False
         self.tileSize = 75
+        
         self.needsUpdate = False
         self.continueButton = None
         self.tiles = []
@@ -157,6 +161,7 @@ class gameScreen():
         dw = True
         self.chars = []
         self.tiles = []
+        
         for i in range(self.width):
             self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.sur, self.tileSize))
         for i in range(self.height):
@@ -185,7 +190,7 @@ class gameScreen():
     def drawBoard(self):
         
         pygame.draw.rect(self.sur, black, pygame.Rect(99, 50-1, self.tileSize * self.width + 2, self.tileSize * self.height + 2), width=2)
-       
+        onScreenChar(str(math.ceil((1+self.game.turns)/2)), self.width + 1, self.height - 3, self.sur, self.tileSize).draw()
         
         if not self.drawnBoard:
             self.literallyDrawBoard()
@@ -195,6 +200,7 @@ class gameScreen():
                     item.draw()
             for item in self.chars:
                 item.draw()
+
   
     
     def reset(self):
@@ -205,6 +211,7 @@ class gameScreen():
     def updateScreen(self):
         if self.needsUpdate or self.game.getNeedsUpdate():
             
+            
             self.sur.fill(white)
             self.reset()
             self.game.prepare()
@@ -214,7 +221,7 @@ class gameScreen():
             self.drawSprites()
             if self.continueButton != None: self.continueButton.draw()
             pygame.display.update()
-            self.game.clearUpdateFlags()
+            self.clearUpdateFlags()
 
         
     def drawSprites(self):
@@ -248,6 +255,7 @@ class gameScreen():
 
     def drawStartScreen(self):
         if self.needsUpdate:
+            
             
             
             self.sur.fill(white)
@@ -295,18 +303,21 @@ class gameScreen():
         return self.endMenuHandle(handled, clicked)
         
     def decrementTileSize(self):
-        if self.tileSize != 10:
-            self.tileSize -= 1
+        if self.tileSize - 5 > 10:
+            self.tileSize -= 5
             self.drawnBoard = False
             self.game.updateTileSize(self.tileSize)
-            self.makeMainScreen()
+            self.resizeScreen()
+            
 
     def incrementTileSize(self):
-        if self.tileSize != 150:
-            self.tileSize += 1
+        if self.tileSize + 5 < 150:
+            self.tileSize += 5
             self.drawnBoard = False
             self.game.updateTileSize(self.tileSize)
-            self.makeMainScreen()
+            self.resizeScreen()
+
+            
         
     def startNewGame(self):
         self.setUpStartScreen()
@@ -335,9 +346,9 @@ class gameScreen():
                     running = False
                 elif event.type == pygame.MOUSEWHEEL:
                     
-                    if event.dict["y"] == -1:
+                    if event.y == -1:
                         self.decrementTileSize()
-                    else:
+                    elif event.y == 1:
                         self.incrementTileSize()
                 else:
                     
@@ -366,7 +377,8 @@ class gameScreen():
                                     gameStarted = False
                                     self.drawnBoard = False
                                     self.allsprites.empty()
-                                    
+                                else:
+                                    self.game.handleEvent(event)
                                     
                                 
                                     
@@ -386,7 +398,7 @@ class gameScreen():
                                     
                                     gameOver = True
                                     
-                                    self.continueButton = button((self.width*self.tileSize+175, 50+(self.height - 3)*self.tileSize, 200, 50), "New Game", self.sur, lambda: self.startNewGame(), (0, 100, 0))
+                                    self.continueButton = button((self.width*self.tileSize+175, 50+self.height*self.tileSize, 200, 50), "New Game", self.sur, lambda: self.startNewGame(), (0, 100, 0))
                                     self.needsUpdate = True
                                     
                                 
@@ -397,9 +409,21 @@ class gameScreen():
                 self.updateScreen()
                 clock.tick(60)
                 
+    def getScreenSize(self):
+        return (self.width*self.tileSize + 400, self.height*self.tileSize + 200)
+
+    def resizeScreen(self):
+        newScreenSize = self.getScreenSize()
+        if newScreenSize[0] > self.screenSize[0] or newScreenSize[1] > self.screenSize[1]:
+            self.screenSize = newScreenSize
+            self.drawMainScreen()
+
+    def drawMainScreen(self):
+        self.sur = pygame.display.set_mode((self.screenSize))
 
     def makeMainScreen(self):
-        self.sur = pygame.display.set_mode((self.width*self.tileSize + 400, self.height*self.tileSize + 200))
+        self.screenSize = self.getScreenSize()
+        self.drawMainScreen()
 
 def isMouseEvent(aEvent):
     return aEvent.type == pygame.MOUSEMOTION or aEvent.type == pygame.MOUSEBUTTONDOWN or aEvent.type == pygame.MOUSEBUTTONUP

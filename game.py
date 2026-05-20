@@ -165,19 +165,20 @@ class chess(game):
 
 
     def handleEvent(self, aEvent):
-        theTile = False
-        pos = aEvent.pos
-        for tile in self.getTiles():
+        if self.activePlayerHuman():
+            theTile = False
+            pos = aEvent.pos
+            for tile in self.getTiles():
+                
+                if tile.collidepoint(pos):
+                    theTile = tile
+                    break
             
-            if tile.collidepoint(pos):
-                theTile = tile
-                break
-        
-        result = self.activePlayer.handleEvent(aEvent, theTile, self.grabBotString(), self.grabPlayerTiles(self.getNonActivePlayer()))
-        if self.activePlayer.promotionNeeded: 
-            self.needsMenu = True
-            self.drawPromotion()
-        return result
+            result = self.activePlayer.handleEvent(aEvent, theTile, self.grabBotString(), self.grabPlayerTiles(self.getNonActivePlayer()), self.gameRunning())
+            if self.activePlayer.promotionNeeded: 
+                self.needsMenu = True
+                self.drawPromotion()
+            return result
     
     def drawPromotion(self):
         array = [7, 5, 3, 1]
@@ -496,8 +497,10 @@ class chess(game):
             magicNum = 0
             if self.p1act():
                 magicNum = 4
-            theOnePiece = destTile.getNeighbor(2+magicNum).piece
-            self.eatPiece(theOnePiece, destTile)
+            theOneTile = destTile.getNeighbor(2+magicNum)
+            theOnePiece = theOneTile.piece
+            
+            self.eatPiece(theOnePiece, theOneTile)
             
         if enPassantTile:
             self.setEnPassantTile(enPassantTile)
