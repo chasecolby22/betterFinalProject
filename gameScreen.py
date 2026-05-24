@@ -133,12 +133,13 @@ class gameScreen():
         self.game.clearUpdateFlags()
     def __init__(self):
         
-        self.allsprites = pygame.sprite.Group()
+        self.allsprites = pygame.sprite.LayeredUpdates()
         self.specialsprites = pygame.sprite.Group()
         self.drawnBoard = False
         self.menuDrawn = False
         self.tileSize = 75
-        
+        self.validPiece = None
+        self.background = None
         self.needsUpdate = False
         self.continueButton = None
         self.tiles = []
@@ -226,6 +227,13 @@ class gameScreen():
 
         
     def drawSprites(self):
+        if self.game.validPiece():
+            self.allsprites.change_layer(self.game.validPiece(), 1)
+            self.validPiece = self.game.validPiece()
+        else:
+            if self.validPiece:
+                self.allsprites.change_layer(self.validPiece, 0)
+                self.validPiece = None
         self.allsprites.draw(self.sur)
         self.specialsprites.draw(self.sur)
         

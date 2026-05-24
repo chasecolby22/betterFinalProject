@@ -6,6 +6,9 @@ from players import *
 
 class game(board):
 
+    def validPiece(self):
+        return self.activePlayer.validPiece
+
     def updateTileSize(self, newTileSize):
         self.tileSize = newTileSize
         for item in self.specialPieces:

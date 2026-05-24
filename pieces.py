@@ -20,6 +20,7 @@ class dumbPiece(pygame.sprite.Sprite):
     
     def __init__(self, anX, aY, aColor, aHeight, tileSize):
         super().__init__()
+        self._layer = 0
         self.x = anX
         self.y = aY
         self.coords = ""

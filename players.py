@@ -286,9 +286,11 @@ class humanPlayer(player):
                     if not wasClick:
 
                         if not self.checkSelection(aTile, botString, op, gameRunning)[0]:
-                            if self.validPiece: self.validPiece.setPos(self.validPieceOgPos)
+                            if self.validPiece: 
+                                self.validPiece.setPos(self.validPieceOgPos)
+                                
+                                self.validPieceTile.rect.reset()
                             self.needsUpdate = True
-                            if self.validPiece: self.validPieceTile.rect.reset()
                             self.validPiece = False
                             self.validPieceTile = ""
                             self.validPieceOgPos = ""
@@ -317,6 +319,7 @@ class humanPlayer(player):
                                 self.validPiece = self.findPosibilities(aTile, op)
                                 if self.validPiece:
                                     self.validPieceTile = aTile
+                                    
                                     pos = aTile.getPos()
                                     self.validPieceOgPos = (100+self.tileSize*pos[0]+self.tileSize/2, 50 + self.tileSize*((self.height -1)-pos[1]) + self.tileSize/2)
                                     
@@ -334,6 +337,7 @@ class humanPlayer(player):
                         self.validPiece.setPos(self.validPieceOgPos)
                         self.needsUpdate = True
                         self.validPiece = False
+                        
                         self.validPieceOgPos = ""
                         self.validPieceTile.rect.reset()
                         self.validPieceTile = ""
