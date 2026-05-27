@@ -26,14 +26,16 @@ class player():
     def start(self):
         for i in range(2):
             for j in range(len(self.pieceList[i])):
-                item = self.pieceList[i][j](j, self.pawnsRow if i == 0 else self.row, self.color)
-                if item.isKing():
-                    if self.king == "EMPTY":
+                iitem = self.pieceList[i][j]
+                if iitem != None:
+                    item = iitem(j, self.pawnsRow if i == 0 else self.row, self.color)
+                    if item.isKing():
+                        if self.king == "EMPTY":
 
-                        self.king = item
-                    else:
-                        exit()
-                self.pieces.append(item)
+                            self.king = item
+                        else:
+                            exit()
+                    self.pieces.append(item)
 
         
             
@@ -147,6 +149,7 @@ class humanPlayer(player):
             self.goodPiece = self.validPiece
             self.goodPieceTile = self.validPieceTile
             self.good = True
+            print(botString)
             if botString != "":
                 self.startX = thing[self.validPiece.x]
                 self.startY = str(self.validPiece.y+1)

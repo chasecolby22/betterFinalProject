@@ -10,32 +10,36 @@ font = pygame.font.SysFont("Arial", 42)
 
 
 class onScreenTile(pygame.Rect):
-    def __init__(self, aRect, aPos, aColor, aTileSize, aCompanion):
+    def __init__(self, aRect, aColor, aTileSize, aCompanion):
         super().__init__(aRect[0], aRect[1], aRect[2], aRect[3])
-        self.tileSize = aTileSize
-        self.pos = aPos
-        self.companion = aCompanion
-        self.color = aColor
+
+        self.tileSize = aTileSize #New tiles get created with resize
         
-        self.surr = ""
+        self.companion = aCompanion #Logic tile
+
+        self.color = aColor #On screen color
+        
     
     def draw(self, aSurface):
         
-        pygame.draw.rect(aSurface, self.color, self)
+        pygame.draw.rect(aSurface, self.color, self) #Draw myself
+
         border = self.companion.border
         if border == "black": border = black
-        pygame.draw.rect(aSurface, border, self, width = self.companion.bwidth)
+        pygame.draw.rect(aSurface, border, self, width = self.companion.bwidth) #Draw border
 
         if border != black:
            
 
-            
+            #Draw highlight
             surr = pygame.Surface((self.tileSize, self.tileSize), pygame.SRCALPHA)
             surr.fill((border[0], border[1], border[2], 105))
             
                 
             aSurface.blit(surr, self.topleft)
+
         if self.companion.circleColor != None:
+            #Draw circle
             pygame.draw.circle(aSurface, self.companion.circleColor, self.center, self.tileSize / 3)
 
 class button(pygame.Rect):
@@ -51,8 +55,8 @@ class button(pygame.Rect):
         
     def draw(self):
         
-        pygame.draw.rect(self.sur, self.color, self)
-        self.sur.blit(self.text, self.text_rect)
+        pygame.draw.rect(self.sur, self.color, self) #background
+        self.sur.blit(self.text, self.text_rect)#Text
         
         
 
@@ -80,7 +84,7 @@ class button(pygame.Rect):
             if aEvent.button == 1:
                 if self.collidepoint(aEvent.pos):
                     
-                    self.myLambda()
+                    self.myLambda(aScreen)
                     clicked = True
         return clicked, handled
         
@@ -99,10 +103,11 @@ class onScreenChar():
 class onScreenSprite(pygame.sprite.Sprite):
     def __init__(self, aCompanion, aTileSize, aHeight):
         super().__init__()
-        self.x = aCompanion.x
+        self.companion = aCompanion #Logic piece
+        self.x = aCompanion.x 
         self.y = aCompanion.y
-        self.companion = aCompanion
         self.coords = ""
+        self.gameChosen = False
         self.image = False
         self.rawImage = False
         self.tileSize = aTileSize
@@ -123,10 +128,11 @@ class onScreenSprite(pygame.sprite.Sprite):
     
     def changeImage(self):
         transform = self.tileSize / 75
+        image = "./" + self.companion.color + "/" + self.companion.name() + ".png"
         if not self.rawImage:
-            self.rawImage = "./" + self.companion.color + "/" + self.companion.name() + ".png"
-        self.image = pygame.image.load(self.rawImage).convert_alpha()
-        if transform != 1: self.image = pygame.transform.smoothscale_by(self.image, transform)
+            self.rawImage = pygame.image.load(image).convert_alpha()
+        if transform != 1: self.image = pygame.transform.smoothscale_by(self.rawImage, transform)
+        else: self.image = self.rawImage
 
     def collidepoint(self, aPos):
         self.rect.collidepoint(aPos)
@@ -156,13 +162,13 @@ class onScreenSprite(pygame.sprite.Sprite):
 class gameScreen():
 
     def convertSprites(self, aLambda, aGroup):
-        array = []
-        aLambda(array)
-        for item in array:
-            aGroup.add(onScreenSprite(item, self.tileSize, self.height))
+        sprites = []
+        aLambda(sprites)
+        for sprite in sprites:
+            aGroup.add(onScreenSprite(sprite, self.tileSize, self.height))
             
     def gatherSprites(self):
-        self.convertSprites(lambda array: self.game.gatherBaseSprites(array), self.allsprites)
+        self.convertSprites(lambda sprites: self.game.gatherBaseSprites(sprites), self.allsprites)
         
         
     def menuHandle(self, aEvent):
@@ -173,7 +179,7 @@ class gameScreen():
 
     def drawMenu(self):
         if not self.menuDrawn:
-            self.convertSprites(lambda array: self.game.gatherSpecialSprites(array), self.specialsprites)
+            self.convertSprites(lambda sprites: self.game.gatherSpecialSprites(sprites), self.specialsprites)
             self.menuDrawn = True
             self.updateScreen()
 
@@ -192,19 +198,17 @@ class gameScreen():
         self.validPiece = None
         self.background = None
         self.needsUpdate = False
+        
         self.continueButton = None
         self.tiles = []
-        self.sur = ""
-        self.game = ""
+        self.sur = "" #main game drawing surface
+        self.game = "" #main game logic object
 
-    def initializeGame(self, aLambda):
-        array = aLambda()
-        self.game = chess(array[0], array[1], array[2], array[3])
-        self.width = array[0]
-        self.height = array[1]
+    def initializeGame(self):
+        
+        self.width = self.game.width
+        self.height = self.game.height
 
-    def standard(self):
-        return lambda: chess.standard()
         
 
     def addSprite(self, aSprite):
@@ -232,7 +236,7 @@ class gameScreen():
                 if j != self.width - 1:
                     dw = not dw
                     
-                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), (j, (self.height-1)-i), color, self.tileSize, self.game.getTile(j, (self.height-1)-i))
+                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), color, self.tileSize, self.game.getTile(j, (self.height-1)-i))
                 tile.draw(self.background)
                 row.append(tile)
             self.tiles.append(row)
@@ -265,6 +269,7 @@ class gameScreen():
                 
 
     def updateScreen(self):
+        #This only gets called once the game has started
         if self.needsUpdate or self.game.getNeedsUpdate():
             
             
@@ -287,45 +292,26 @@ class gameScreen():
             for item in self.allsprites:
                 if item.companion == self.game.validPiece():
                     self.validPiece = item
+                    self.allsprites.change_layer(self.validPiece, 1)
                     return
         if self.validPiece:
             self.validPiece.move()
+            self.allsprites.change_layer(self.validPiece, 0)
             self.validPiece = False
         
     def drawSprites(self):
-        if self.game.validPiece():
-            for item in self.allsprites:
-                if item.companion == self.game.validPiece():
-                    self.validPiece = item
-            self.allsprites.change_layer(self.validPiece, 1)
-        else:
-            if self.validPiece:
-                self.allsprites.change_layer(self.validPiece, 0)
-                self.validPiece = None
+        
         self.allsprites.draw(self.sur)
         self.specialsprites.draw(self.sur)
         
 
     def returnButton(self, anX, aText, aLambda):
-        return button((anX, 50, 200, 100), aText, self.sur, aLambda, (0, 255, 255))
+        return button((300*anX + 50, 50, 200, 100), aText, self.sur, aLambda, (0, 255, 255))
     
-    def startBotGame(self):
-        
-        self.startGame(self.standard(), 5, 10)
    
-
-    def startStandardGame(self):
-        
-        self.startGame(self.standard())
-    
-    def startTest(self):
-        
-        self.startGame(lambda: chess.test())
-
-    def startGame(self, aLambda, x = 0, y = 0):
-        self.initializeGame(aLambda)
+    def startGame(self):
+        self.initializeGame()
         self.makeMainScreen()
-        self.game.startGame(x, y)
         self.gatherSprites()
         self.drawBoard()
         self.updateScreen()
@@ -343,14 +329,26 @@ class gameScreen():
             pygame.display.update()
             self.needsUpdate = False
 
+    def chess(self):
+        self.gameClass = chess
+        
+
+    def setUpChooseScreen(self):
+        self.sur = pygame.display.set_mode((1000, 400))
+        self.sur.fill(white)
+        self.buttons = []
+        self.buttons.append(self.returnButton(1, "Chess", lambda a: self.chess()))
+        self.needsUpdate = True
+        self.drawStartScreen()
+
     def setUpStartScreen(self):
         self.sur = pygame.display.set_mode((1000, 400))
         self.sur.fill(white)
        
         self.buttons = []
-        self.buttons.append(self.returnButton(50, "No Bots", lambda: self.startStandardGame()))
-        self.buttons.append(self.returnButton(350, "Bots", lambda: self.startBotGame()))
-        self.buttons.append(self.returnButton(650, "test", lambda: self.startTest()))
+        things = self.gameClass.grabThings()
+        for i in range(len(things)//2):
+            self.buttons.append(self.returnButton(i, things[i *2], things[i * 2 + 1]))
         self.needsUpdate = True
         self.drawStartScreen()
 
@@ -370,8 +368,9 @@ class gameScreen():
             if not clicked:
                   
                 clicked = newclicked
-            
+
             if not handled:
+               
                 handled = newhandled
         return self.endMenuHandle(handled, clicked)
         
@@ -428,14 +427,16 @@ class gameScreen():
             self.updateTileSize()
         
     def startNewGame(self):
-        self.setUpStartScreen()
+        self.gameChosen = False
+        self.setUpChooseScreen()
         self.continueButton = None
 
     def run(self):
         
-        self.setUpStartScreen()
+        self.setUpChooseScreen()
         running = True
         gameOver = False
+        gameChosen = False
         clock = pygame.time.Clock()
         gameStarted = False
        
@@ -459,63 +460,69 @@ class gameScreen():
                     elif event.y == 1:
                         self.incrementTileSize()
                 else:
-                    
-                    if not gameStarted:
-                        
+                    if not gameChosen:
                         if self.startHandle(event):
-                           
-                           gameStarted = True    
-                        self.drawStartScreen() 
-                        
-                        
-                    elif self.game.needsMenu:
-                        self.drawMenu()
-                        self.menuHandle(event)
-                                
+                            gameChosen = True
+                            self.setUpStartScreen()
+                            self.drawStartScreen()
                     else:
-                        self.game.drawCheck()
-                      
-                        if isMouseEvent(event):
-                            tile = False
-                            for row in self.tiles:
-                                for item in row:
-                                    if item.collidepoint(event.pos):
-                                        tile = item.companion
-                            if gameOver:
-                                
-                                if self.continueHandle(event):
-                                    gameOver = False
-                                    gameStarted = False
-                                    self.drawnBoard = False
-                                    self.allsprites.empty()
-                                else:
-                                    self.game.handleEvent(event, tile)
+                        if not gameStarted:
+                            
+                            if self.startHandle(event):
+                            
+                                gameStarted = True
+                                self.drawStartScreen() 
+                            
+                            
+                        elif self.game.needsMenu:
+                            self.drawMenu()
+                            self.menuHandle(event)
                                     
-                                
+                        else:
+                            self.game.drawCheck()
+                        
+                            if isMouseEvent(event):
+                                tile = False
+                                for row in self.tiles:
+                                    for item in row:
+                                        if item.collidepoint(event.pos):
+                                            tile = item.companion
+                                if gameOver:
                                     
-                            else:
-                                if self.game.gameRunning():
-                                    if self.game.activePlayerHuman():
-                                        anArray = self.game.handleEvent(event, tile)
+                                    if self.continueHandle(event):
+                                        gameOver = False
+                                        gameStarted = False
+                                        self.drawnBoard = False
+                                        gameChosen = False
+                                        self.allsprites.empty()
+                                    else:
+                                        self.game.handleEvent(event, tile)
                                         
                                     
-                                        if anArray[0]:
-                                            "Code here incase needed later, user has made a valid move"
-                                        if not anArray[1] and anArray[0]:
+                                        
+                                else:
+                                    if self.game.gameRunning():
+                                        if self.game.activePlayerHuman():
+                                            anArray = self.game.handleEvent(event, tile)
                                             
-                                            self.game.moveHumanPiece()
                                         
-                                        self.getValidPiece()
-                                        if self.validPiece:
-                                            self.needsUpdate = True
-                                            self.validPiece.setPos(event.pos)
+                                            if anArray[0]:
+                                                "Code here incase needed later, user has made a valid move"
+                                            if not anArray[1] and anArray[0]:
+                                                
+                                                self.game.moveHumanPiece()
+                                            
+                                            self.getValidPiece()
+                                            if self.validPiece:
+                                                self.needsUpdate = True
+                                                self.validPiece.setPos(event.pos)
+                                            
+                                    else:
                                         
-                                else:
-                                    
-                                    gameOver = True
-                                    
-                                    self.continueButton = button((self.width*self.tileSize+175, 50+self.height*self.tileSize, 200, 50), "New Game", self.sur, lambda: self.startNewGame(), (0, 100, 0))
-                                    self.needsUpdate = True
+                                        gameOver = True
+                                        
+                                        self.continueButton = button((self.width*self.tileSize+175, 50+self.height*self.tileSize, 200, 50), "New Game", self.sur, lambda a: self.startNewGame(), (0, 100, 0))
+                                        self.needsUpdate = True
                                     
                                 
                                 

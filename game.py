@@ -64,27 +64,35 @@ class game(board):
         self.player2.needsUpdate = False
 
 
-
 class chess(game):
 
-    def handleNoEvent(self):
-        if not self.gameRunning(): return False
-        if self.activePlayer.isHuman(): 
-            
-            self.activePlayer.handleNoEvent()
-        else: self.botTurn()
-        return True
-
-    
-    
+    @classmethod
+    def standardGame(cls, aScreen):
+        thing = cls(8, 8, cls.standardPieceList(), True)
+        thing.startGame(0, 0)
+        aScreen.game = thing
+        aScreen.startGame()
+        
     
     @classmethod
-    def standard(cls):
-        return[8, 8, cls.standardPieceList(), True]
+    def botGame(cls, aScreen):
+        thing = cls(8, 8, cls.standardPieceList(), True)
+        thing.startGame(5, 10)
+        aScreen.game = thing
+        aScreen.startGame()
+    
+    @classmethod
+    def startTest(cls, aScreen):
+        thing = cls(16, 4, cls.testPieceList(), True)
+        thing.startGame(0, 0)
+
+        aScreen.game = thing
+        aScreen.startGame() 
 
     @classmethod
-    def test(cls):
-        return [16, 4, cls.testPieceList(), False]
+    def grabThings(cls):
+        
+        return ["No Bots", lambda aScreen: cls.standardGame(aScreen), "Bots", lambda aScreen: cls.botGame(aScreen), "test", lambda aScreen: cls.startTest(aScreen)]
     
     @classmethod
     def standardPieceList(cls):
@@ -92,7 +100,9 @@ class chess(game):
 
     @classmethod
     def testPieceList(cls):
-        return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, rook, knight, knight, bishop, bishop, queen, queen, king, queen, bishop, bishop, knight, knight, rook, rook]]
+        return [[pawn, pawn, None, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, rook, knight, knight, bishop, bishop, queen, queen, king, queen, bishop, bishop, None, knight, rook, rook]]
+    
+
     
     def __init__(self, width, height, pieceList, wantsBot):
 
@@ -116,6 +126,15 @@ class chess(game):
         else:
             self.botStarted = False
 
+    
+    def handleNoEvent(self):
+        if not self.gameRunning(): return False
+        if self.activePlayer.isHuman(): 
+            
+            self.activePlayer.handleNoEvent()
+        else: self.botTurn()
+        return True
+    
     def clearKnowsFlags(self):
         self.knowsBot = False
         self.knowsCheck = False
