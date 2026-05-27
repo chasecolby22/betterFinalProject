@@ -10,46 +10,33 @@ font = pygame.font.SysFont("Arial", 42)
 
 
 class onScreenTile(pygame.Rect):
-    def __init__(self, aRect, aPos, aColor, aTileSize):
+    def __init__(self, aRect, aPos, aColor, aTileSize, aCompanion):
         super().__init__(aRect[0], aRect[1], aRect[2], aRect[3])
         self.tileSize = aTileSize
         self.pos = aPos
+        self.companion = aCompanion
         self.color = aColor
-        self.different = False
-        self.border = black
-        self.bwidth = 2
+        
         self.surr = ""
-        
-        self.circleColor = None
-        
-
-    def highlight(self, aColor):
-        self.border = aColor
-        self.bwidth = 3
-        self.different = True
-
-    def reset(self):
-        
-        self.border = black
-        self.bwidth = 2
-        self.different = False
-
+    
     def draw(self, aSurface):
         
         pygame.draw.rect(aSurface, self.color, self)
-        pygame.draw.rect(aSurface, self.border, self, width = self.bwidth)
+        border = self.companion.border
+        if border == "black": border = black
+        pygame.draw.rect(aSurface, border, self, width = self.companion.bwidth)
 
-        if self.border != black:
+        if border != black:
            
 
             
             surr = pygame.Surface((self.tileSize, self.tileSize), pygame.SRCALPHA)
-            surr.fill((self.border[0], self.border[1], self.border[2], self.tileSize))
+            surr.fill((border[0], border[1], border[2], 105))
             
                 
             aSurface.blit(surr, self.topleft)
-        if self.circleColor != None:
-            pygame.draw.circle(aSurface, self.circleColor, self.center, self.tileSize / 3)
+        if self.companion.circleColor != None:
+            pygame.draw.circle(aSurface, self.companion.circleColor, self.center, self.tileSize / 3)
 
 class button(pygame.Rect):
     def __init__(self, aRectSpec, aText, aSurface, aLambda, aColor):
@@ -245,11 +232,10 @@ class gameScreen():
                 if j != self.width - 1:
                     dw = not dw
                     
-                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), (j, (self.height-1)-i), color, self.tileSize)
+                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), (j, (self.height-1)-i), color, self.tileSize, self.game.getTile(j, (self.height-1)-i))
                 tile.draw(self.background)
                 row.append(tile)
             self.tiles.append(row)
-        self.game.updateTiles(self.tiles)
         
         self.drawnBoard = True
         
@@ -265,7 +251,7 @@ class gameScreen():
             self.sur.blit(self.background)
             for row in self.tiles:
                 for item in row:
-                    if item.different:
+                    if item.companion.different:
                         item.draw(self.sur)
             for item in self.chars:
                 item.draw()
@@ -275,7 +261,8 @@ class gameScreen():
     def reset(self):
         for row in self.tiles:
             for item in row:
-                item.circleColor = None
+                item.companion.circleColor = None
+                
 
     def updateScreen(self):
         if self.needsUpdate or self.game.getNeedsUpdate():
@@ -489,6 +476,11 @@ class gameScreen():
                         self.game.drawCheck()
                       
                         if isMouseEvent(event):
+                            tile = False
+                            for row in self.tiles:
+                                for item in row:
+                                    if item.collidepoint(event.pos):
+                                        tile = item.companion
                             if gameOver:
                                 
                                 if self.continueHandle(event):
@@ -497,14 +489,14 @@ class gameScreen():
                                     self.drawnBoard = False
                                     self.allsprites.empty()
                                 else:
-                                    self.game.handleEvent(event)
+                                    self.game.handleEvent(event, tile)
                                     
                                 
                                     
                             else:
                                 if self.game.gameRunning():
                                     if self.game.activePlayerHuman():
-                                        anArray = self.game.handleEvent(event)
+                                        anArray = self.game.handleEvent(event, tile)
                                         
                                     
                                         if anArray[0]:
@@ -537,6 +529,9 @@ class gameScreen():
         return (self.width*self.tileSize + 400, self.height*self.tileSize + 200)
 
     def resizeScreen(self):
+        for row in self.tiles:
+            for item in row:
+                item.companion.reset()
         newScreenSize = self.getScreenSize()
         if newScreenSize[0] > self.screenSize[0] or newScreenSize[1] > self.screenSize[1]:
             self.screenSize = newScreenSize

@@ -46,11 +46,6 @@ class board():
             item.setTileNeighbors()
         for item in self.columns:
             item.setRookTileNeighbors()
-            
-    def updateTiles(self, aScreenBoard):
-        for row in aScreenBoard:
-            for tile in row:
-                self.columns[tile.pos[0]].setTile(tile, tile.pos[1])
         
     def getTile(self, col, row):
         return self.columns[col].getTile(row)
@@ -76,10 +71,6 @@ class nullColumn():
         return nullTile.getSingleInstance()
 
 class column():
-    
-    def setTile(self, aTile, aPos):
-        
-        self.tiles[aPos].rect = aTile
         
     def __init__(self, i, height):
         self.tiles = []
@@ -179,14 +170,23 @@ class tile():
         self.different = False
         self.circleColor = None
         self.border = "black"
+        self.bwidth = 2
         self.x = i
         self.y = j
         for _ in range(8):
             self.neighbors.append(nullTile.getSingleInstance())
             self.rookNeighbors.append(nullTile.getSingleInstance())
 
-    def collidepoint(self, aPos):
-        return self.rect.collidepoint(aPos)
+    def highlight(self, aColor):
+        self.border = aColor
+        self.different = True
+        self.bwidth = 3
+
+    def reset(self):
+        self.border = "black"
+        self.bwidth = 2
+        self.different = False
+
 
     def getPos(self):
         return (self.x, self.y)

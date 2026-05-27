@@ -8,6 +8,7 @@ class cursor(pygame.sprite.Sprite):
         self.image = pygame.image.load(anImage).convert_alpha()
         
         self.rect = self.image.get_rect(topleft = (-100, -100)) 
+        self._layer = 2
 
     def move(self, aPos):
         self.rect = self.image.get_rect(center = aPos)  
@@ -51,8 +52,8 @@ class player():
         
         checkers = self.getCheckers(aListOfTiles, kingTile)
         if len(checkers) > 0:
-            kingTile.rect.circleColor = (255, 0, 0)
-            kingTile.rect.different = True
+            kingTile.circleColor = (255, 0, 0)
+            kingTile.different = True
         return len(checkers) > 0
 
     def addPiece(self, aPiece):
@@ -156,12 +157,12 @@ class humanPlayer(player):
             if self.validPiece.name() == "pawn":
                 if self.rrow == self.oppositeRow:
                     self.promotionNeeded = True
-                    self.validPieceTile.rect.reset()
+                    self.validPieceTile.reset()
                     return [False, True]
                     
             if not self.promotionNeeded:
                 self.goodPieceTile = self.validPieceTile
-                self.validPieceTile.rect.reset()
+                self.validPieceTile.reset()
                 return self.finishSelection(botString, op)
         return [False, False]
 
@@ -188,7 +189,7 @@ class humanPlayer(player):
     def setHighlight(self, aTile, aColor):
         if self.highlightedTile != aTile:
             self.clearHighlight()
-            aTile.rect.highlight(aColor)
+            aTile.highlight(aColor)
             self.highlightedTile = aTile
             self.needsUpdate = True
 
@@ -223,7 +224,7 @@ class humanPlayer(player):
     
     def clearHighlight(self):
         if self.highlightedTile != "":
-            self.highlightedTile.rect.reset()
+            self.highlightedTile.reset()
             self.needsUpdate = True
             
         self.highlightedTile = ""
@@ -239,8 +240,8 @@ class humanPlayer(player):
                 if aTile :
                     if not self.validPiece:
                         
+                        pos = aTile.getPos()
                         for piece in self.pieces:
-                            pos = aTile.getPos()
                             if piece.getPos() == pos:
                                 
                                 self.validPiece = piece
@@ -250,13 +251,15 @@ class humanPlayer(player):
                                 self.dragging = False
                                 self.mouseDown = True
                                 self.mouseDownTime = time.time()
-                                self.needsUpdate = True
                                 self.originalMousePos = aEvent.pos
+                                self.needsUpdate = True
 
                     else:
                         if self.validPieceTile == aTile:
                             self.dragging = True
-                            pygame.mouse.set_cursor(pygame.cursors.diamond)
+
+                            pygame.mouse.set_visible = False
+                            
                
 
         elif aEvent.type == pygame.MOUSEBUTTONUP:
@@ -276,7 +279,7 @@ class humanPlayer(player):
                         if not self.checkSelection(aTile, botString, op, gameRunning)[0]:
                             if self.validPiece: 
                                 
-                                self.validPieceTile.rect.reset()
+                                self.validPieceTile.reset()
                             self.needsUpdate = True
                             self.validPiece = False
                             self.validPieceTile = ""
@@ -296,7 +299,7 @@ class humanPlayer(player):
                                 if array[1]: thePromotion = True
                                
                                 self.needsUpdate = True
-                                self.validPieceTile.rect.reset()
+                                self.validPieceTile.reset()
                                 self.validPieceTile = ""
                               
                                 self.posibleMoves = ""
@@ -323,7 +326,7 @@ class humanPlayer(player):
                         self.validPiece = False
                         
                         
-                        self.validPieceTile.rect.reset()
+                        self.validPieceTile.reset()
                         self.validPieceTile = ""
                         self.posibleMoves = ""
                         self.clearHighlight()
@@ -337,13 +340,13 @@ class humanPlayer(player):
                     if time.time() - self.mouseDownTime > .25:
                         if not self.dragging:
                             self.dragging = True
-                            if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
+                            if self.validPiece: self.validPieceTile.highlight((200, 200, 0))
                     
                 
                     if compareTuple(aEvent.pos, self.originalMousePos):
                         if not self.dragging:
                             self.dragging = True
-                            if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
+                            if self.validPiece: self.validPieceTile.highlight((200, 200, 0))
             
             if not self.validPiece and not self.findPosibilities(aTile, op):
                 self.posibleMoves = ""
@@ -365,16 +368,16 @@ class humanPlayer(player):
                         if aTile != self.highlightedTile:
                             
                             self.setHighlight(aTile, (0, 100, 0))
-                            self.validPieceTile.rect.highlight((139, 128, 0))    
+                            self.validPieceTile.highlight((139, 128, 0))    
                             set = True
                             break
-                        self.validPieceTile.rect.highlight((139, 128, 0))
+                        self.validPieceTile.highlight((139, 128, 0))
                         set = True
 
                 if not set:
                     if self.validPieceTile != aTile:
                         self.setHighlight(aTile, (255, 0, 0))
-                        self.validPieceTile.rect.highlight((139, 128, 0))
+                        self.validPieceTile.highlight((139, 128, 0))
                     else:
                         self.setHighlight(aTile, (200, 200, 0))
                     
@@ -395,7 +398,7 @@ class humanPlayer(player):
                 
                 if time.time() - self.mouseDownTime > .25:
                     self.dragging = True
-                    if self.validPiece: self.validPieceTile.rect.highlight((200, 200, 0))
+                    if self.validPiece: self.validPieceTile.highlight((200, 200, 0))
                     self.needsUpdate = True
 def compareTuple(t1, t2):
     x = t1[0] - t2[0]

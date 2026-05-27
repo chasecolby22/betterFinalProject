@@ -131,9 +131,9 @@ class chess(game):
     def drawPos(self):
         pos = False
         for tile in self.posibleMoves():
-            if tile.rect.border == (255, 100, 0): tile.rect.reset()
-            tile.rect.circleColor = (255, 150, 0)
-            tile.rect.different = True
+            if tile.border == (255, 100, 0): tile.reset()
+            tile.circleColor = (255, 150, 0)
+            tile.different = True
 
             pos = True
         return pos
@@ -146,15 +146,9 @@ class chess(game):
             self.drawBot()
 
 
-    def handleEvent(self, aEvent):
+    def handleEvent(self, aEvent, theTile):
         if self.activePlayerHuman():
-            theTile = False
-            pos = aEvent.pos
-            for tile in self.getTiles():
-                
-                if tile.collidepoint(pos):
-                    theTile = tile
-                    break
+            
             
             result = self.activePlayer.handleEvent(aEvent, theTile, self.grabBotString(), self.grabPlayerTiles(self.getNonActivePlayer()), self.gameRunning())
             if self.activePlayer.promotionNeeded: 
@@ -297,8 +291,8 @@ class chess(game):
             
             for item in self.botChoice:
                 
-                item.rect.circleColor = (0, 100, 0) 
-                item.rect.different = True
+                item.circleColor = (0, 100, 0) 
+                item.different = True
 
     
 
@@ -319,14 +313,14 @@ class chess(game):
                 else:
                     if self.checkers != "":
                         for item in self.checkers:
-                            item.rect.reset()
+                            item.reset()
                         self.checkers = ""
                 self.knowsCheck = True
             
             
                     
             for item in self.checkers:
-                item.rect.highlight((255, 100, 0))
+                item.highlight((255, 100, 0))
 
             
         
