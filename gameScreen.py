@@ -10,32 +10,34 @@ font = pygame.font.SysFont("Arial", 42)
 
 
 class onScreenTile(pygame.Rect):
-    def __init__(self, aRect, aPos, aSurface, aColor, aTileSize):
+    def __init__(self, aRect, aPos, aColor, aTileSize):
         super().__init__(aRect[0], aRect[1], aRect[2], aRect[3])
         self.tileSize = aTileSize
         self.pos = aPos
         self.color = aColor
-        self.sur = aSurface
+        self.different = False
         self.border = black
         self.bwidth = 2
         self.surr = ""
         
         self.circleColor = None
-        self.draw()
+        
 
     def highlight(self, aColor):
         self.border = aColor
         self.bwidth = 3
+        self.different = True
 
     def reset(self):
         
         self.border = black
         self.bwidth = 2
+        self.different = False
 
-    def draw(self):
+    def draw(self, aSurface):
         
-        pygame.draw.rect(self.sur, self.color, self)
-        pygame.draw.rect(self.sur, self.border, self, width = self.bwidth)
+        pygame.draw.rect(aSurface, self.color, self)
+        pygame.draw.rect(aSurface, self.border, self, width = self.bwidth)
 
         if self.border != black:
            
@@ -45,9 +47,9 @@ class onScreenTile(pygame.Rect):
             surr.fill((self.border[0], self.border[1], self.border[2], self.tileSize))
             
                 
-            self.sur.blit(surr, self.topleft)
+            aSurface.blit(surr, self.topleft)
         if self.circleColor != None:
-            pygame.draw.circle(self.sur, self.circleColor, self.center, self.tileSize / 3)
+            pygame.draw.circle(aSurface, self.circleColor, self.center, self.tileSize / 3)
 
 class button(pygame.Rect):
     def __init__(self, aRectSpec, aText, aSurface, aLambda, aColor):
@@ -61,7 +63,7 @@ class button(pygame.Rect):
         self.myLambda = aLambda
         
     def draw(self):
-
+        
         pygame.draw.rect(self.sur, self.color, self)
         self.sur.blit(self.text, self.text_rect)
         
@@ -92,7 +94,7 @@ class button(pygame.Rect):
                 if self.collidepoint(aEvent.pos):
                     
                     self.myLambda()
-                    clicked =  True
+                    clicked = True
         return clicked, handled
         
 class onScreenChar():
@@ -107,30 +109,92 @@ class onScreenChar():
     def draw(self):
         self.sur.blit(self.letter, self.rect)
 
+class onScreenSprite(pygame.sprite.Sprite):
+    def __init__(self, aCompanion, aTileSize, aHeight):
+        super().__init__()
+        self.x = aCompanion.x
+        self.y = aCompanion.y
+        self.companion = aCompanion
+        self.coords = ""
+        self.image = False
+        self.rawImage = False
+        self.tileSize = aTileSize
+        self.height = aHeight
+        self.move()
+
+
+    def updateTileSize(self, newTileSize):
+        self.tileSize = newTileSize
+        self.move()
+        self.changeImage()
+
+    def move(self):
+        if not self.image:
+            self.changeImage()
+        self.coords = (100 + self.x * self.tileSize, 50 + (self.tileSize * ((self.height - 1) - self.y)))
+        self.rect = self.image.get_rect(topleft = self.coords)
+    
+    def changeImage(self):
+        transform = self.tileSize / 75
+        if not self.rawImage:
+            self.rawImage = "./" + self.companion.color + "/" + self.companion.name() + ".png"
+        self.image = pygame.image.load(self.rawImage).convert_alpha()
+        if transform != 1: self.image = pygame.transform.smoothscale_by(self.image, transform)
+
+    def collidepoint(self, aPos):
+        self.rect.collidepoint(aPos)
+
+    def getPos(self):
+        return (self.x, self.y)
+    
+    def setPos(self, aPos):
+        self.coords = (aPos[0], aPos[1])
+        self.rect = self.image.get_rect(center = self.coords)
+
+    def update(self):
+        if self.companion.wantsEaten:
+            self.kill()
+            return
+        if self.companion.needsChanged:
+            self.rawImage = False
+            self.changeImage()
+            self.companion.needsChanged = False
+        daX = self.companion.x
+        daY = self.companion.y
+        if self.x != daX or self.y != daY:
+            self.x = daX
+            self.y = daY
+            self.move()
+
 class gameScreen():
 
+    def convertSprites(self, aLambda, aGroup):
+        array = []
+        aLambda(array)
+        for item in array:
+            aGroup.add(onScreenSprite(item, self.tileSize, self.height))
+            
     def gatherSprites(self):
-        self.game.gatherBaseSprites(self.allsprites)
+        self.convertSprites(lambda array: self.game.gatherBaseSprites(array), self.allsprites)
         
         
     def menuHandle(self, aEvent):
-        if self.game.menuHandle(aEvent):
+        if self.gameMenuHandle(aEvent):
             self.menuDrawn = False
             for item in self.specialsprites:
                 item.kill()
 
     def drawMenu(self):
         if not self.menuDrawn:
-            self.game.gatherSpecialSprites(self.specialsprites)
+            self.convertSprites(lambda array: self.game.gatherSpecialSprites(array), self.specialsprites)
             self.menuDrawn = True
             self.updateScreen()
-
-   
 
 
     def clearUpdateFlags(self):
         self.needsUpdate = False
         self.game.clearUpdateFlags()
+
     def __init__(self):
         
         self.allsprites = pygame.sprite.LayeredUpdates()
@@ -148,7 +212,7 @@ class gameScreen():
 
     def initializeGame(self, aLambda):
         array = aLambda()
-        self.game = chess(array[0], array[1], array[2], array[3], self.tileSize)
+        self.game = chess(array[0], array[1], array[2], array[3])
         self.width = array[0]
         self.height = array[1]
 
@@ -163,11 +227,11 @@ class gameScreen():
         dw = True
         self.chars = []
         self.tiles = []
-        
+        self.background = pygame.surface.Surface(self.getScreenSize(), pygame.SRCALPHA)
         for i in range(self.width):
-            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.sur, self.tileSize))
+            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.background, self.tileSize))
         for i in range(self.height):
-            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.sur, self.tileSize))
+            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.background, self.tileSize))
         for item in self.chars:
             item.draw()
         for i in range(self.height):
@@ -177,12 +241,12 @@ class gameScreen():
                 if dw:
                     
                     color = blue
-                
-                if j != 7:
+                    
+                if j != self.width - 1:
                     dw = not dw
                     
-                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), (j, (self.height-1)-i), self.sur, color, self.tileSize)
-                tile.draw()
+                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), (j, (self.height-1)-i), color, self.tileSize)
+                tile.draw(self.background)
                 row.append(tile)
             self.tiles.append(row)
         self.game.updateTiles(self.tiles)
@@ -196,10 +260,13 @@ class gameScreen():
         
         if not self.drawnBoard:
             self.literallyDrawBoard()
+            self.sur.blit(self.background)
         else:
+            self.sur.blit(self.background)
             for row in self.tiles:
                 for item in row:
-                    item.draw()
+                    if item.different:
+                        item.draw(self.sur)
             for item in self.chars:
                 item.draw()
 
@@ -218,18 +285,32 @@ class gameScreen():
             self.reset()
             self.game.prepare()
             self.drawBoard()
-    
+            for item in self.allsprites: item.update()
             
             self.drawSprites()
             if self.continueButton != None: self.continueButton.draw()
             pygame.display.update()
             self.clearUpdateFlags()
 
+    def getValidPiece(self):
+        
+        if self.game.dragging():
+            if self.validPiece == self.game.validPiece():
+                return
+            for item in self.allsprites:
+                if item.companion == self.game.validPiece():
+                    self.validPiece = item
+                    return
+        if self.validPiece:
+            self.validPiece.move()
+            self.validPiece = False
         
     def drawSprites(self):
         if self.game.validPiece():
-            self.allsprites.change_layer(self.game.validPiece(), 1)
-            self.validPiece = self.game.validPiece()
+            for item in self.allsprites:
+                if item.companion == self.game.validPiece():
+                    self.validPiece = item
+            self.allsprites.change_layer(self.validPiece, 1)
         else:
             if self.validPiece:
                 self.allsprites.change_layer(self.validPiece, 0)
@@ -311,22 +392,53 @@ class gameScreen():
         clicked, handled = self.continueButton.handleEvent(anEvent, self)
         return self.endMenuHandle(handled, clicked)
         
+    
+
+    def gameMenuHandle(self, anEvent):
+      
+      
+        if anEvent.type == pygame.MOUSEMOTION:
+            if self.collidesSpecial(anEvent.pos):
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        elif anEvent.type == pygame.MOUSEBUTTONUP and anEvent.button == 1:
+            item = self.collidesSpecial(anEvent.pos)
+            if item:
+                self.game.setPromotion(item.companion.pro())
+                self.game.needsMenu = False
+                return True
+        return False
+    
+    def collidesSpecial(self, aPos):
+        for item in self.specialsprites:
+            
+            if item.rect.collidepoint(aPos):
+                return item
+        return False
+
+
+    def updateTileSize(self):
+        for item in self.allsprites:
+            item.updateTileSize(self.tileSize)
+        for item in self.specialsprites:
+            item.updateTileSize(self.tileSize)
+        self.needsUpdate = True
+        self.drawnBoard = False
+        
+        self.resizeScreen()
+
     def decrementTileSize(self):
         if self.tileSize - 5 > 10:
             self.tileSize -= 5
-            self.drawnBoard = False
-            self.game.updateTileSize(self.tileSize)
-            self.resizeScreen()
+            self.updateTileSize()    
             
 
     def incrementTileSize(self):
         if self.tileSize + 5 < 150:
             self.tileSize += 5
-            self.drawnBoard = False
-            self.game.updateTileSize(self.tileSize)
-            self.resizeScreen()
-
             
+            self.updateTileSize()
         
     def startNewGame(self):
         self.setUpStartScreen()
@@ -372,8 +484,6 @@ class gameScreen():
                     elif self.game.needsMenu:
                         self.drawMenu()
                         self.menuHandle(event)
-                        
-
                                 
                     else:
                         self.game.drawCheck()
@@ -402,6 +512,11 @@ class gameScreen():
                                         if not anArray[1] and anArray[0]:
                                             
                                             self.game.moveHumanPiece()
+                                        
+                                        self.getValidPiece()
+                                        if self.validPiece:
+                                            self.needsUpdate = True
+                                            self.validPiece.setPos(event.pos)
                                         
                                 else:
                                     

@@ -13,11 +13,6 @@ class cursor(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center = aPos)  
 
 class player():
-  
-    def updateTileSize(self, newTileSize):
-        self.tileSize = newTileSize
-        for item in self.pieces:
-            item.updateTileSize(newTileSize)
         
     def hasMove(self, listOfTiles, op):
         for i in range(len(self.pieces)):
@@ -28,19 +23,16 @@ class player():
         return False
     
     def start(self):
-        for i in range(len(self.pieceList[0])) :
-            item = self.pieceList[0][i](i, self.pawnsRow, self.color, self.height, self.tileSize)
-            if item.isKing(): self.king = item
-            self.pieces.append(item)
-            
-        for i in range(len(self.pieceList[1])):
-            item = self.pieceList[1][i](i, self.row, self.color, self.height, self.tileSize)
-            if item.isKing() : 
-                if self.king == "EMPTY":
-                    self.king = item
-                else:
-                    exit()
-            self.pieces.append(item)
+        for i in range(2):
+            for j in range(len(self.pieceList[i])):
+                item = self.pieceList[i][j](j, self.pawnsRow if i == 0 else self.row, self.color)
+                if item.isKing():
+                    if self.king == "EMPTY":
+
+                        self.king = item
+                    else:
+                        exit()
+                self.pieces.append(item)
 
         
             
@@ -60,6 +52,7 @@ class player():
         checkers = self.getCheckers(aListOfTiles, kingTile)
         if len(checkers) > 0:
             kingTile.rect.circleColor = (255, 0, 0)
+            kingTile.rect.different = True
         return len(checkers) > 0
 
     def addPiece(self, aPiece):
@@ -73,9 +66,6 @@ class player():
     def setEnPassantTile(self, a):
         for item in self.pieces:
             item.enPassantTile = a
-
-    def isPlayer2(self):
-        return not self.player1
    
     def setPromotion(self, a):
         self.promotion = a
@@ -83,16 +73,14 @@ class player():
 
     def addPieces(self, aGroup):
         for item in self.pieces:
-            aGroup.add(item)
+            aGroup.append(item)
 
-    def __init__(self, player1, pieceList, height, tileSize):
+    def __init__(self, player1, pieceList, height):
         self.king = "EMPTY"
         self.pieceList = pieceList
         self.kingTile = ""
-        self.height = height
+        
         self.validPieceTile = ""
-        self.validPieceOgPos = ""
-        self.tileSize = tileSize
         self.highlightedTile = ""
         self.enPassantTile = ""
         self.tempMoveString = ""
@@ -257,7 +245,7 @@ class humanPlayer(player):
                                 
                                 self.validPiece = piece
                                 
-                                self.validPieceOgPos = (100+self.tileSize*pos[0]+self.tileSize/2, 50 + self.tileSize*((self.height -1)-pos[1]) + self.tileSize/2)
+                                
                                 self.validPieceTile = aTile
                                 self.dragging = False
                                 self.mouseDown = True
@@ -287,13 +275,11 @@ class humanPlayer(player):
 
                         if not self.checkSelection(aTile, botString, op, gameRunning)[0]:
                             if self.validPiece: 
-                                self.validPiece.setPos(self.validPieceOgPos)
                                 
                                 self.validPieceTile.rect.reset()
                             self.needsUpdate = True
                             self.validPiece = False
                             self.validPieceTile = ""
-                            self.validPieceOgPos = ""
                             
                             
                             self.clearHighlight()
@@ -308,11 +294,11 @@ class humanPlayer(player):
                             array = self.checkSelection(aTile, botString, op, gameRunning)
                             if not array[0]:
                                 if array[1]: thePromotion = True
-                                self.validPiece.setPos(self.validPieceOgPos)
+                               
                                 self.needsUpdate = True
                                 self.validPieceTile.rect.reset()
                                 self.validPieceTile = ""
-                                self.validPieceOgPos = ""
+                              
                                 self.posibleMoves = ""
                                 self.clearHighlight()
                                 
@@ -320,8 +306,6 @@ class humanPlayer(player):
                                 if self.validPiece:
                                     self.validPieceTile = aTile
                                     
-                                    pos = aTile.getPos()
-                                    self.validPieceOgPos = (100+self.tileSize*pos[0]+self.tileSize/2, 50 + self.tileSize*((self.height -1)-pos[1]) + self.tileSize/2)
                                     
                                     
                                 self.tempTile = ""
@@ -334,11 +318,11 @@ class humanPlayer(player):
 
                 else:
                     if self.validPiece and self.dragging:
-                        self.validPiece.setPos(self.validPieceOgPos)
+                        
                         self.needsUpdate = True
                         self.validPiece = False
                         
-                        self.validPieceOgPos = ""
+                        
                         self.validPieceTile.rect.reset()
                         self.validPieceTile = ""
                         self.posibleMoves = ""
@@ -371,10 +355,7 @@ class humanPlayer(player):
 
                 
                 
-            elif self.validPiece and self.dragging:
-                
-                self.validPiece.setPos(aEvent.pos)
-                self.needsUpdate = True
+           
             
             if self.validPiece and aTile:
                 set = False
@@ -432,8 +413,8 @@ class botPlayer(player):
     def isHuman(self):
         return False
     
-    def __init__(self, player1, difficulty, aPieceList, aHeight, tileSize):
-        super().__init__(player1, aPieceList, aHeight, tileSize)
+    def __init__(self, player1, difficulty, aPieceList, aHeight):
+        super().__init__(player1, aPieceList, aHeight)
         self.started = False
         self.difficulty = difficulty
 

@@ -6,29 +6,24 @@ from players import *
 
 class game(board):
 
+    def dragging(self):
+        return self.activePlayer.dragging
+    
     def validPiece(self):
         return self.activePlayer.validPiece
 
-    def updateTileSize(self, newTileSize):
-        self.tileSize = newTileSize
-        for item in self.specialPieces:
-            item.updateTileSize(newTileSize)
-        self.player1.updateTileSize(newTileSize)
-        self.player2.updateTileSize(newTileSize)
-        self.needsUpdate = True
-
     def gatherSpecialSprites(self, aGroup):
         for item in self.specialPieces:
-            aGroup.add(item)
+            aGroup.append(item)
         self.needsUpdate = True
 
     def gatherBaseSprites(self, aGroup):
+        
         self.runBoth(lambda a: a.addPieces(aGroup) )
         
-    def __init__(self, width, height, pieceList, tileSize):
+    def __init__(self, width, height, pieceList):
         super().__init__(width, height)
         self.player1 = ""
-        self.tileSize = tileSize
         self.player2 = ""
         self.pieceList = pieceList
         self.activePlayer = ""
@@ -80,29 +75,9 @@ class chess(game):
         else: self.botTurn()
         return True
 
-    def collidesSpecial(self, aPos):
-        for item in self.specialPieces:
-            if item.rect.collidepoint(aPos):
-                return item
-        return False
     
-    def menuHandle(self, anEvent):
-      
-            
-        if anEvent.type == pygame.MOUSEMOTION:
-            if self.collidesSpecial(anEvent.pos):
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
-            else:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        elif anEvent.type == pygame.MOUSEBUTTONUP and anEvent.button == 1:
-            item = self.collidesSpecial(anEvent.pos)
-            if item:
-                self.setPromotion(item.pro())
-                
-                self.specialPieces = []
-                self.needsMenu = False
-                return True
-        return False
+    
+    
     @classmethod
     def standard(cls):
         return[8, 8, cls.standardPieceList(), True]
@@ -119,10 +94,10 @@ class chess(game):
     def testPieceList(cls):
         return [[pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn, pawn], [rook, rook, knight, knight, bishop, bishop, queen, queen, king, queen, bishop, bishop, knight, knight, rook, rook]]
     
-    def __init__(self, width, height, pieceList, wantsBot, tileSize):
+    def __init__(self, width, height, pieceList, wantsBot):
 
         
-        super().__init__(width, height, pieceList, tileSize)
+        super().__init__(width, height, pieceList)
         
         self.botString = ""
         self.knowsCheck = False
@@ -158,6 +133,7 @@ class chess(game):
         for tile in self.posibleMoves():
             if tile.rect.border == (255, 100, 0): tile.rect.reset()
             tile.rect.circleColor = (255, 150, 0)
+            tile.rect.different = True
 
             pos = True
         return pos
@@ -190,10 +166,10 @@ class chess(game):
         array = [7, 5, 3, 1]
         if self.height < 5:
             array = [3, 2, 1, 0]
-        self.specialPieces.append(dumbQueen(self.width+1, array[0], self.color(), self.height, self.tileSize))
-        self.specialPieces.append(dumbRook(self.width+1, array[1], self.color(), self.height, self.tileSize))
-        self.specialPieces.append(dumbBishop(self.width+1, array[2], self.color(), self.height, self.tileSize))
-        self.specialPieces.append(dumbKnight(self.width+1, array[3], self.color(), self.height, self.tileSize))
+        self.specialPieces.append(dumbQueen(self.width+1, array[0], self.color()))
+        self.specialPieces.append(dumbRook(self.width+1, array[1], self.color()))
+        self.specialPieces.append(dumbBishop(self.width+1, array[2], self.color()))
+        self.specialPieces.append(dumbKnight(self.width+1, array[3], self.color()))
         self.needsUpdate = True
 
     
@@ -243,16 +219,16 @@ class chess(game):
             self.createBotPlayer2(aDifficulty)
 
     def createHumanPlayer1(self):
-        self.player1 = humanPlayer(True, self.pieceList, self.height, self.tileSize)
+        self.player1 = humanPlayer(True, self.pieceList, self.height)
 
     def createHumanPlayer2(self):
-        self.player2 = humanPlayer(False, self.pieceList, self.height, self.tileSize)
+        self.player2 = humanPlayer(False, self.pieceList, self.height)
 
     def createBotPlayer1(self, aDifficulty):
-        self.player1 = botPlayer(True, aDifficulty, self.pieceList, self.height, self.tileSize)
+        self.player1 = botPlayer(True, aDifficulty, self.pieceList, self.height)
 
     def createBotPlayer2(self, aDifficulty):
-        self.player2 = botPlayer(False, aDifficulty, self.pieceList, self.height, self.tileSize)
+        self.player2 = botPlayer(False, aDifficulty, self.pieceList, self.height)
        
     def startGame(self, player1dif, player2dif):
         
@@ -322,6 +298,7 @@ class chess(game):
             for item in self.botChoice:
                 
                 item.rect.circleColor = (0, 100, 0) 
+                item.rect.different = True
 
     
 
@@ -465,7 +442,7 @@ class chess(game):
             
     def eatPiece(self, aPiece, aTile):
         self.getNonActivePlayer().pieces.remove(aPiece)
-        aPiece.kill()
+        aPiece.wantsEaten = True
         aTile.empty()
 
     def grabBotString(self):
@@ -494,7 +471,8 @@ class chess(game):
                     thing = bishop
             
             aPiece.__class__ = thing
-            aPiece.changeImage()
+            aPiece.needsChanged = True
+            
         
         if eatenPiece != "EMPTY":
             self.eatPiece(eatenPiece, destTile)

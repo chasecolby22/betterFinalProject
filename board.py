@@ -176,7 +176,9 @@ class tile():
         self.piece = "EMPTY"
         self.neighbors = []
         self.rookNeighbors = []
-        self.rect = ""
+        self.different = False
+        self.circleColor = None
+        self.border = "black"
         self.x = i
         self.y = j
         for _ in range(8):

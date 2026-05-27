@@ -12,47 +12,27 @@ def checkSlide(aTile, i, j):
         return aTile.getNeighbor(i).slide(i, j)
 
 class dumbPiece(pygame.sprite.Sprite):
-
-    def updateTileSize(self, newTileSize):
-        self.tileSize = newTileSize
-        self.move(self.x, self.y)
-        self.changeImage()
     
-    def __init__(self, anX, aY, aColor, aHeight, tileSize):
+    def __init__(self, anX, aY, aColor):
         super().__init__()
         self._layer = 0
         self.x = anX
         self.y = aY
-        self.coords = ""
         self.color = aColor
-        self.tileSize = tileSize
-        self.height = aHeight
-        self.image = False
+        self.wantsEaten = False
+        self.needsChanged = False
         self.move(anX, aY)
 
     def isKing(self):
         return False
     
     def move(self, anX, aY):
-        if not self.image:
-            self.changeImage()
+        
         self.x = anX
         self.y = aY
-        self.coords = (100 + (self.tileSize*anX), 50 + (self.tileSize*((self.height - 1)-aY)))
         
-        self.rect = self.image.get_rect(topleft = self.coords)
-
-    def changeImage(self):
-        transform = self.tileSize / 75
-        anImage = "./" + self.color + "/" + self.name() + ".png"
-        self.image = pygame.image.load(anImage).convert_alpha()
-        if transform != 1: self.image = pygame.transform.smoothscale_by(self.image, transform)
-        
-        
-        
-        
-    def collidepoint(self, aPos):
-        self.rect.collidepoint(aPos)
+    def getPos(self):
+        return (self.x, self.y)
 
    
 
@@ -71,8 +51,7 @@ class piece(dumbPiece):
     def getY(self):
         return self.y
     
-    def getPos(self):
-        return (self.x, self.y)
+    
     
     def getHasMoved(self):
         return self.hasMoved
@@ -84,19 +63,14 @@ class piece(dumbPiece):
         self.x = anX
         self.y = aY
 
-    def __init__(self, anX, aY, aColor, aHeight, aTileSize ):
-        super().__init__(anX, aY, aColor, aHeight, aTileSize)
+    def __init__(self, anX, aY, aColor ):
+        super().__init__(anX, aY, aColor)
         
         
         self.hasMoved = False
         
         self.enPassantTile = ""
-
     
-
-    def setPos(self, aPos):
-        self.coords = (aPos[0], aPos[1])
-        self.rect = self.image.get_rect(center = self.coords)
     
     def cCanMove(self, presentTile, futureTile, opListOfCheckers, kingTile):
         
