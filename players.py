@@ -212,7 +212,7 @@ class humanPlayer(player):
             
         
 
-    def findPosibilities(self, aTile, op):
+    def findPosibilities(self, aTile, op, gameRunning):
         if not aTile: return False
         for piece in self.pieces:
             
@@ -221,7 +221,7 @@ class humanPlayer(player):
                 self.drawPosibilities(piece, aTile, op)
                 pygame.mouse.set_cursor(pygame.cursors.diamond)
                 return piece
-        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        if gameRunning: pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         
         return False
     
@@ -243,19 +243,18 @@ class humanPlayer(player):
                 if aTile :
                     if not self.validPiece:
                         
-                        pos = aTile.getPos()
-                        for piece in self.pieces:
-                            if piece.getPos() == pos:
+                        piece = aTile.piece
+                        if piece in self.pieces:
                                 
-                                self.validPiece = piece
-                                
-                                
-                                self.validPieceTile = aTile
-                                self.dragging = False
-                                self.mouseDown = True
-                                self.mouseDownTime = time.time()
-                                self.originalMousePos = aEvent.pos
-                                self.needsUpdate = True
+                            self.validPiece = piece
+                            
+                            
+                            self.validPieceTile = aTile
+                            self.dragging = False
+                            self.mouseDown = True
+                            self.mouseDownTime = time.time()
+                            self.originalMousePos = aEvent.pos
+                            self.needsUpdate = True
 
                     else:
                         if self.validPieceTile == aTile:
@@ -308,7 +307,7 @@ class humanPlayer(player):
                                 self.posibleMoves = ""
                                 self.clearHighlight()
                                 
-                                self.validPiece = self.findPosibilities(aTile, op)
+                                self.validPiece = self.findPosibilities(aTile, op, gameRunning)
                                 if self.validPiece:
                                     self.validPieceTile = aTile
                                     
@@ -351,12 +350,12 @@ class humanPlayer(player):
                             self.dragging = True
                             if self.validPiece: self.validPieceTile.highlight((200, 200, 0))
             
-            if not self.validPiece and not self.findPosibilities(aTile, op):
+            if not self.validPiece and not self.findPosibilities(aTile, op, gameRunning):
                 self.posibleMoves = ""
                 if aTile:
                     self.setHighlight(aTile, (255, 0, 0))
                     
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                if gameRunning: pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                 
 
                 
@@ -390,10 +389,9 @@ class humanPlayer(player):
             if not aTile:    
                 
                 self.clearHighlight()
-            
-
         
         return [done, thePromotion]
+    
     def handleNoEvent(self):
         
         if not self.dragging:
@@ -403,6 +401,7 @@ class humanPlayer(player):
                     self.dragging = True
                     if self.validPiece: self.validPieceTile.highlight((200, 200, 0))
                     self.needsUpdate = True
+                    
 def compareTuple(t1, t2):
     x = t1[0] - t2[0]
     y = t1[1] - t2[1]

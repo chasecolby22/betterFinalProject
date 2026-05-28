@@ -164,6 +164,12 @@ class chess(game):
             self.drawCheck()
             self.drawBot()
 
+    def selectedItem(self, anItem):
+        if not anItem:
+            return False
+        self.setPromotion(anItem.companion.pro())
+        self.needsMenu = False
+        return True
 
     def handleEvent(self, aEvent, theTile):
         if self.activePlayerHuman():

@@ -209,8 +209,6 @@ class gameScreen():
         self.width = self.game.width
         self.height = self.game.height
 
-        
-
     def addSprite(self, aSprite):
         self.allsprites.add(aSprite)
 
@@ -219,10 +217,11 @@ class gameScreen():
         self.chars = []
         self.tiles = []
         self.background = pygame.surface.Surface(self.getScreenSize(), pygame.SRCALPHA)
+        ts = self.tileSize
         for i in range(self.width):
-            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.background, self.tileSize))
+            self.chars.append(onScreenChar(chr(i+ord("A")), i, self.height, self.background, ts))
         for i in range(self.height):
-            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.background, self.tileSize))
+            self.chars.append(onScreenChar(str(self.height - i), self.width, i, self.background, ts))
         for item in self.chars:
             item.draw()
         for i in range(self.height):
@@ -235,8 +234,7 @@ class gameScreen():
                     
                 if j != self.width - 1:
                     dw = not dw
-                    
-                tile = onScreenTile((100+j*self.tileSize, 50+i*self.tileSize, self.tileSize, self.tileSize), color, self.tileSize, self.game.getTile(j, (self.height-1)-i))
+                tile = onScreenTile((100+j*ts, 50+i*ts, ts, ts), color, ts, self.game.getTile(j, (self.height-1)-i))
                 tile.draw(self.background)
                 row.append(tile)
             self.tiles.append(row)
@@ -257,10 +255,7 @@ class gameScreen():
                 for item in row:
                     if item.companion.different:
                         item.draw(self.sur)
-            for item in self.chars:
-                item.draw()
 
-  
     
     def reset(self):
         for row in self.tiles:
@@ -286,7 +281,7 @@ class gameScreen():
 
     def getValidPiece(self):
         
-        if self.game.dragging():
+        if self.game.dragging() or not self.game.gameRunning():
             if self.validPiece == self.game.validPiece():
                 return
             for item in self.allsprites:
@@ -352,12 +347,12 @@ class gameScreen():
         self.needsUpdate = True
         self.drawStartScreen()
 
-    def endMenuHandle(self, handled, clicked):
+    def endMenuHandle(self, handled):
         if not handled:
+          
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        if clicked:
-            return True
-        return False
+       
+       
 
     def startHandle(self, anEvent):
         
@@ -372,11 +367,13 @@ class gameScreen():
             if not handled:
                
                 handled = newhandled
-        return self.endMenuHandle(handled, clicked)
+        self.endMenuHandle(handled)
+        return clicked
         
     def continueHandle(self, anEvent):
         clicked, handled = self.continueButton.handleEvent(anEvent, self)
-        return self.endMenuHandle(handled, clicked)
+        self.endMenuHandle(handled)
+        return clicked
         
     
 
@@ -390,10 +387,8 @@ class gameScreen():
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         elif anEvent.type == pygame.MOUSEBUTTONUP and anEvent.button == 1:
             item = self.collidesSpecial(anEvent.pos)
-            if item:
-                self.game.setPromotion(item.companion.pro())
-                self.game.needsMenu = False
-                return True
+            return self.game.selectedItem(item)
+            
         return False
     
     def collidesSpecial(self, aPos):
@@ -441,7 +436,7 @@ class gameScreen():
         gameStarted = False
        
         while running:
-            
+            "hI"
                 
             eventList = pygame.event.get()
             if len(eventList) == 0:
@@ -454,24 +449,26 @@ class gameScreen():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.MOUSEWHEEL:
-                    
-                    if event.y == -1:
-                        self.decrementTileSize()
-                    elif event.y == 1:
-                        self.incrementTileSize()
+                    if gameStarted:
+                        if event.y == -1:
+                            self.decrementTileSize()
+                        elif event.y == 1:
+                            self.incrementTileSize()
                 else:
                     if not gameChosen:
+                        
                         if self.startHandle(event):
                             gameChosen = True
                             self.setUpStartScreen()
-                            self.drawStartScreen()
+                        self.drawStartScreen()
+                        
                     else:
                         if not gameStarted:
                             
                             if self.startHandle(event):
                             
                                 gameStarted = True
-                                self.drawStartScreen() 
+                            self.drawStartScreen() 
                             
                             
                         elif self.game.needsMenu:
