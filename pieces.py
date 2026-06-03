@@ -1,27 +1,28 @@
 
-import pygame
-
+#Go through the list of Tiles the enemy's pieces are on and ask the pieces if they
+#can move to where the king is (it doesn't matter for check if they can't truly go there)
+#((They just have to be able to see the kingTile))
 def theyAreChecking(aListOfTiles, aKingTile):
     for item in aListOfTiles:
       
-        if item.piece.canMove(item, aKingTile, None):
+        if item.getPiece().canMove(item, aKingTile, None):
             return True
     return False
         
+#Return the tile i degrees and j units away.
+#If there is anything in the way or the edge of the board comes first
+#This returns false
 def checkSlide(aTile, i, j):
         return aTile.getNeighbor(i).slide(i, j)
 
-class dumbPiece(pygame.sprite.Sprite):
+class dumbPiece():
     
     def __init__(self, anX, aY, aColor):
-        super().__init__()
-        self._layer = 0
         self.x = anX
         self.y = aY
         self.color = aColor
         self.wantsEaten = False
         self.needsChanged = False
-        self.move(anX, aY)
 
     def isKing(self):
         return False
@@ -30,28 +31,33 @@ class dumbPiece(pygame.sprite.Sprite):
         
         self.x = anX
         self.y = aY
-        
+    
     def getPos(self):
         return (self.x, self.y)
 
-   
-
-class piece(dumbPiece):
-    
-    
     def getColor(self):
         return self.color
 
+    def setColor(self, newItem):
+        self.color = newItem
+
+    def getWantsEaten(self):
+        return self.wantsEaten
+
+    def setWantsEaten(self, newItem):
+        self.wantsEaten = newItem
+
+    def getNeedsChanged(self):
+        return self.getNeedsChanged
+
+    def setNeedsChanged(self, newItem):
+        self.getNeedsChanged = newItem
+   
+
+class piece(dumbPiece):
+
     def isPlayer1(self):
         return self.color == "white"
-
-    def getX(self):
-        return self.x
-
-    def getY(self):
-        return self.y
-    
-    
     
     def getHasMoved(self):
         return self.hasMoved
@@ -59,9 +65,11 @@ class piece(dumbPiece):
     def setHasMoved(self, aBool):
         self.hasMoved = aBool
     
-    def setCoords(self, anX, aY):
-        self.x = anX
-        self.y = aY
+    def getEnPassantTile(self):
+        return self.enPassantTile
+
+    def getEnPassantTile(self, newTile):
+        self.enPassantTile = newTile
 
     def __init__(self, anX, aY, aColor ):
         super().__init__(anX, aY, aColor)
@@ -76,8 +84,8 @@ class piece(dumbPiece):
         
         oldX = self.x
         oldY = self.y
-        anX = futureTile.x
-        aY = futureTile.y
+        anX = futureTile.getX()
+        aY = futureTile.getY()
         if anX == oldX and oldY == aY:
             return False
         anArray = self.canMove(presentTile, futureTile, opListOfCheckers)
@@ -89,20 +97,20 @@ class piece(dumbPiece):
         oldTile.empty()
         removedItem = ""
         for item in opListOfCheckers:
-            if item.piece == oldPiece:
+            if item.isSame(oldPiece):
                 opListOfCheckers.remove(item)
                 removedItem = item
         
         
         newTile.setPiece(self)
-        self.setCoords(anX, aY)
+        self.move(anX, aY)
         
         if theyAreChecking(opListOfCheckers, kingTile):
             anArray = False
         oldTile.setPiece(self)
         if removedItem != "": opListOfCheckers.append(removedItem)
         newTile.setPiece(oldPiece)
-        self.setCoords(oldX, oldY)
+        self.move(oldX, oldY)
         return anArray
     
     def isValidMove(self, tile):
@@ -146,7 +154,7 @@ class piece(dumbPiece):
         return False
     
     def defaultCheck(self, destTile):
-        return not destTile.isEmpty() and destTile.getColor() == self.color
+        return destTile.matches(self.color)
 
 class dumbKnight(dumbPiece):
     def name(self):
@@ -160,12 +168,12 @@ class knight(piece):
     def canMove(self, fromTile, destTile, _):
         
         if self.defaultCheck(destTile): return False
-        if destTile in fromTile.rookNeighbors: return default(destTile)
+        if destTile in fromTile.knightNeighbors: return default(destTile)
         return False
     
     def findMoves(self, fromTile, op, kingTile):
         moves = []
-        for tile in fromTile.rookNeighbors:
+        for tile in fromTile.knightNeighbors:
             moves = self.checkValidity(tile, moves, fromTile, op, kingTile)
         return moves
     
@@ -185,6 +193,7 @@ class rook(piece):
         
         if self.defaultCheck(destTile):
             return False
+        #8 is not a magic number is it the number of directions
         for i in range(8):
             if i % 2 == 1:
                 continue
@@ -195,6 +204,7 @@ class rook(piece):
     
     def findMoves(self, fromTile, op, kingTile):
         moves = []
+        #8 is not a magic number is it the number of directions
         for i in range(8):
             if i % 2 == 1:
                 continue
@@ -344,30 +354,30 @@ class king(piece):
                 return False
             if not rightCastle.getNeighbor(4).isEmpty() or not rightCastle.isEmpty():
                 return False
-            self.setCoords(anX-1, aY)
+            self.move(anX-1, aY)
             if theyAreChecking(op, rightCastle.getNeighbor(4)):
-                self.setCoords(anX-2, aY)
+                self.move(anX-2, aY)
                 return False
-            self.setCoords(anX, aY)
+            self.move(anX, aY)
             if theyAreChecking(op, destTile):
-                self.setCoords(anX-2, aY)
+                self.move(anX-2, aY)
                 return False
-            self.setCoords(anX-2, aY)
+            self.move(anX-2, aY)
             return [destTile, False, [7]]
         if not self.hasMoved and leftCastle == destTile:
             if theyAreChecking(op, fromTile) or leftCastle.getNeighbor(4).getNeighbor(4).hasMoved():
                 return False
             if not leftCastle.getNeighbor(4).isEmpty() or not leftCastle.isEmpty() or not leftCastle.getNeighbor(0).isEmpty():
                 return False
-            self.setCoords(anX+1, aY)
+            self.move(anX+1, aY)
             if theyAreChecking(op, leftCastle.getNeighbor(0)):
-                self.setCoords(anX+2, aY)
+                self.move(anX+2, aY)
                 return False
-            self.setCoords(anX, aY)
+            self.move(anX, aY)
             if theyAreChecking(op, destTile):
-                self.setCoords(anX+2, aY)
+                self.move(anX+2, aY)
                 return False
-            self.setCoords(anX+2, aY)
+            self.move(anX+2, aY)
             return [destTile, False, [0]]
         
     def findMoves(self, myTile, op, _):
@@ -386,9 +396,9 @@ class king(piece):
                 anX = rCpos[0]
                 aY = rCpos[1]
                 if rightCastle.isEmpty() and rightCastle.getNeighbor(4).isEmpty():
-                    self.setCoords(anX-1, aY)
+                    self.move(anX-1, aY)
                     if not theyAreChecking(op, rightCastle.getNeighbor(4)):
-                        self.setCoords(anX, aY)
+                        self.move(anX, aY)
                         if not theyAreChecking(op, rightCastle):
                             moves.append(rightCastle)
                 
@@ -397,14 +407,14 @@ class king(piece):
                 anX = lCpos[0]
                 aY = lCpos[1]
                 if leftCastle.isEmpty() and leftCastle.getNeighbor(0).isEmpty() and leftCastle.getNeighbor(4).isEmpty():
-                    self.setCoords(anX+1, aY)
+                    self.move(anX+1, aY)
                     if not theyAreChecking(op, leftCastle.getNeighbor(0)):
-                        self.setCoords(anX, aY)
+                        self.move(anX, aY)
                         if not theyAreChecking(op, leftCastle):
                             
                             moves.append(leftCastle)
 
-        self.setCoords(myTile.getPos()[0], myTile.getPos()[1])
+        self.move(myTile.getPos()[0], myTile.getPos()[1])
         return moves
                     
 class dumbQueen(dumbPiece):

@@ -19,7 +19,7 @@ class game(board):
 
     def gatherBaseSprites(self, aGroup):
         
-        self.runBoth(lambda a: a.addPieces(aGroup) )
+        self.runBoth(lambda player: player.addPieces(aGroup) )
         
     def __init__(self, width, height, pieceList):
         super().__init__(width, height)
@@ -46,11 +46,10 @@ class game(board):
 
     def attachPieces(self, aPlayer):
         for item in aPlayer.pieces:
-            pos = item.getPos()
-            self.getTile(pos[0], pos[1]).piece = item
+            self.setPiece(item)
 
     def attachAll(self):
-        self.runBoth(lambda a: self.attachPieces(a))
+        self.runBoth(lambda player: self.attachPieces(player))
 
     def getNeedsUpdate(self):
         return self.needsUpdate or self.player1.needsUpdate or self.player2.needsUpdate
@@ -83,7 +82,7 @@ class chess(game):
     
     @classmethod
     def startTest(cls, aScreen):
-        thing = cls(16, 4, cls.testPieceList(), True)
+        thing = cls(16, 4, cls.testPieceList(), False)
         thing.startGame(0, 0)
 
         aScreen.game = thing
@@ -266,8 +265,8 @@ class chess(game):
             self.createPlayer1(player1dif)
             self.createPlayer2(player2dif)
             
-        self.player1.start()
-        self.player2.start()
+        self.player1.createPieces()
+        self.player2.createPieces()
         self.player1.kingTile = self.getTile(self.player1.king.x, self.player1.king.y)
         self.player2.kingTile = self.getTile(self.player2.king.x, self.player2.king.y)
         self.attachAll()
@@ -326,10 +325,7 @@ class chess(game):
             if not self.knowsCheck:
 
                 if self.inCheck():
-                    daKing = self.activePlayer.king
                     tempChecker =  self.nonActiveCheckers()
-                    
-                    tempChecker.append(self.getTile(daKing.x, daKing.y))
                     
                     if tempChecker != self.checkers:
                         

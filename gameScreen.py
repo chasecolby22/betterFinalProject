@@ -109,6 +109,7 @@ class onScreenSprite(pygame.sprite.Sprite):
         self.coords = ""
         self.gameChosen = False
         self.image = False
+        self._layer = 0
         self.rawImage = False
         self.tileSize = aTileSize
         self.height = aHeight
@@ -127,9 +128,14 @@ class onScreenSprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft = self.coords)
     
     def changeImage(self):
-        transform = self.tileSize / 75
-        image = "./" + self.companion.color + "/" + self.companion.name() + ".png"
+        thing = "-old"
+        magicNum = 75
+        if thing != "-old":
+            magicNum = 100
+        
+        transform = self.tileSize / magicNum
         if not self.rawImage:
+            image = "./" + self.companion.color + thing +"/" + self.companion.name() + ".png"
             self.rawImage = pygame.image.load(image).convert_alpha()
         if transform != 1: self.image = pygame.transform.smoothscale_by(self.rawImage, transform)
         else: self.image = self.rawImage

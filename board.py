@@ -45,8 +45,12 @@ class board():
         for item in self.columns:
             item.setTileNeighbors()
         for item in self.columns:
-            item.setRookTileNeighbors()
+            item.setKnightTileNeighbors()
         
+    def setPiece(self, aPiece):
+        aPos = aPiece.getPos()
+        self.getTile(aPos[0], aPos[1]).setPiece(aPiece)
+    
     def getTile(self, col, row):
         return self.columns[col].getTile(row)
     
@@ -103,7 +107,11 @@ class column():
             self.tiles[i].setNeighbor(3, leftNeighbor.getNeighbor(2))
             self.tiles[i].setNeighbor(5, leftNeighbor.getNeighbor(6))
 
-    def setRookTileNeighbors(self):
+    def setKnightNeighbors(self, i, aListOfNeighbors):
+        for j in range(8):
+            self.tiles[i].setKnightNeighbor(j, aListOfNeighbors[j])
+
+    def setKnightTileNeighbors(self):
         for i in range(self.height):
             rightNeighbor = self.neighbors[1].getTile(i)
             leftNeighbor = self.neighbors[0].getTile(i)
@@ -111,14 +119,16 @@ class column():
             lleftNeighbor = leftNeighbor.getNeighbor(4)
             uupNeighbor = self.tiles[i].neighbors[2].getNeighbor(2)
             ddownNeighbor = self.tiles[i].neighbors[6].getNeighbor(6)
-            self.tiles[i].setRookNeighbor(0, rrightNeighbor.getNeighbor(2))
-            self.tiles[i].setRookNeighbor(1, uupNeighbor.getNeighbor(0))
-            self.tiles[i].setRookNeighbor(2, uupNeighbor.getNeighbor(4))
-            self.tiles[i].setRookNeighbor(3, lleftNeighbor.getNeighbor(2))
-            self.tiles[i].setRookNeighbor(4, lleftNeighbor.getNeighbor(6))
-            self.tiles[i].setRookNeighbor(5, ddownNeighbor.getNeighbor(4))
-            self.tiles[i].setRookNeighbor(6, ddownNeighbor.getNeighbor(0))            
-            self.tiles[i].setRookNeighbor(7, rrightNeighbor.getNeighbor(6))
+            knightNeighbors = []
+            knightNeighbors.append(rrightNeighbor.getNeighbor(2))
+            knightNeighbors.append(uupNeighbor.getNeighbor(0))
+            knightNeighbors.append(uupNeighbor.getNeighbor(4))
+            knightNeighbors.append(lleftNeighbor.getNeighbor(2))
+            knightNeighbors.append(lleftNeighbor.getNeighbor(6))
+            knightNeighbors.append(ddownNeighbor.getNeighbor(4))
+            knightNeighbors.append(ddownNeighbor.getNeighbor(0))
+            knightNeighbors.append(rrightNeighbor.getNeighbor(6))
+            self.setKnightNeighbors(i, knightNeighbors)
 
     def getTile(self, i):
         return self.tiles[i]
@@ -135,7 +145,7 @@ class nullTile():
     def getNeighbor(self, i):
         return self
     
-    def getRookNeighbor(self, i):
+    def getKnightNeighbor(self, i):
         return self
     
     def slide(self, dir, i):
@@ -166,7 +176,7 @@ class tile():
     def __init__(self, i, j):
         self.piece = "EMPTY"
         self.neighbors = []
-        self.rookNeighbors = []
+        self.knightNeighbors = []
         self.different = False
         self.circleColor = None
         self.border = "black"
@@ -175,7 +185,7 @@ class tile():
         self.y = j
         for _ in range(8):
             self.neighbors.append(nullTile.getSingleInstance())
-            self.rookNeighbors.append(nullTile.getSingleInstance())
+            self.knightNeighbors.append(nullTile.getSingleInstance())
 
     def highlight(self, aColor):
         self.border = aColor
@@ -191,6 +201,20 @@ class tile():
     def getPos(self):
         return (self.x, self.y)
     
+    def getX(self):
+        return self.x
+
+    def getY(self):
+        return self.y
+
+    def isSame(self, aPiece):
+        return self.piece == aPiece
+
+    def matches(self, aColor):
+        if self.isEmpty():
+            return False
+        return self.getColor() == aColor
+
     def getColor(self):
        
         if self.isEmpty():
@@ -207,14 +231,14 @@ class tile():
     def setNeighbor(self, i, aTile):
         self.neighbors[i] = aTile
 
-    def setRookNeighbor(self, i, aTile):
-        self.rookNeighbors[i] = aTile
+    def setKnightNeighbor(self, i, aTile):
+        self.knightNeighbors[i] = aTile
 
     def getNeighbor(self, i):
         return self.neighbors[i]
     
-    def getRookNeighbor(self, i):
-        return self.rookNeighbors[i]
+    def getKnightNeighbor(self, i):
+        return self.knightNeighbors[i]
     
     def getPiece(self):
         return self.piece

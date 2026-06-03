@@ -1,6 +1,7 @@
 import math
 from pieces import *
 import time
+import pygame
 
 class cursor(pygame.sprite.Sprite):
     def __init__(self, anImage):
@@ -23,8 +24,8 @@ class player():
                 return True
         return False
     
-    def start(self):
-        for i in range(2):
+    def createPieces(self):
+        for i in range(len(self.pieceList)):
             for j in range(len(self.pieceList[i])):
                 iitem = self.pieceList[i][j]
                 if iitem != None:
@@ -36,8 +37,6 @@ class player():
                         else:
                             exit()
                     self.pieces.append(item)
-
-        
             
     
     def getCheckers(self, listOfTiles, kingTile):
@@ -48,15 +47,8 @@ class player():
             if item != self.king:
                 if item.canMove(listOfTiles[i], kingTile, None):
                     checkers.append((item.x, item.y))
+        if len(checkers) > 0: checkers.append(kingTile.getPos())
         return checkers
-    
-    def isChecking(self, aListOfTiles, kingTile):
-        
-        checkers = self.getCheckers(aListOfTiles, kingTile)
-        if len(checkers) > 0:
-            kingTile.circleColor = (255, 0, 0)
-            kingTile.different = True
-        return len(checkers) > 0
 
     def addPiece(self, aPiece):
         if aPiece != "EMPTY":
@@ -149,7 +141,6 @@ class humanPlayer(player):
             self.goodPiece = self.validPiece
             self.goodPieceTile = self.validPieceTile
             self.good = True
-            print(botString)
             if botString != "":
                 self.startX = thing[self.validPiece.x]
                 self.startY = str(self.validPiece.y+1)
