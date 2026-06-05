@@ -94,7 +94,7 @@ class piece(dumbPiece):
         newTile = anArray[0]
         oldPiece = newTile.getPiece()
         oldTile = presentTile
-        oldTile.empty()
+        oldTile.makeEmpty()
         removedItem = ""
         for item in opListOfCheckers:
             if item.isSame(oldPiece):

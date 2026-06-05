@@ -458,7 +458,7 @@ class chess(game):
     def eatPiece(self, aPiece, aTile):
         self.getNonActivePlayer().pieces.remove(aPiece)
         aPiece.wantsEaten = True
-        aTile.empty()
+        aTile.makeEmpty()
 
     def grabBotString(self):
         if self.botStarted:
@@ -517,7 +517,7 @@ class chess(game):
 
         destTile.setPiece(aPiece)
         
-        startTile.empty()
+        startTile.makeEmpty()
         aPiece.setHasMoved(True)
         aPiece.move(col, row)
         if aPiece.isKing(): self.activePlayer.kingTile = destTile

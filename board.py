@@ -158,7 +158,7 @@ class nullTile():
         return True
     
 class tile():
-    def empty(self):
+    def makeEmpty(self):
         self.piece = "EMPTY"
 
     def isNullTile(self):
