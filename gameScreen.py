@@ -6,6 +6,9 @@ black = (0, 0, 0)
 pink = (255, 182, 193)
 blue = (173, 216, 230)
 
+def corner(aValue):
+    return (aValue[0]+150, aValue[1]+50)
+
 font = pygame.font.SysFont("Arial", 42)
 
 
@@ -92,7 +95,9 @@ class onScreenChar():
     def __init__(self, char, x, y, aSur, aTileSize):
         tileFont = pygame.font.SysFont("Arial", aTileSize)
         self.letter = tileFont.render(char, True, black)
-        self.pos = (100 + x * aTileSize + aTileSize / 2, 50 + y * aTileSize + aTileSize / 2)
+        hts = aTileSize / 2
+        self.pos = corner( (x * aTileSize + hts, y * aTileSize + hts))
+        
         self.rect = self.letter.get_rect(center=self.pos)
         self.sur = aSur
         self.draw()
@@ -115,16 +120,15 @@ class onScreenSprite(pygame.sprite.Sprite):
         self.height = aHeight
         self.move()
 
-
     def updateTileSize(self, newTileSize):
         self.tileSize = newTileSize
-        self.move()
         self.changeImage()
+        self.move()
 
     def move(self):
         if not self.image:
             self.changeImage()
-        self.coords = (100 + self.x * self.tileSize, 50 + (self.tileSize * ((self.height - 1) - self.y)))
+        self.coords = corner((self.x * self.tileSize, self.tileSize * ((self.height - 1) - self.y)))
         self.rect = self.image.get_rect(topleft = self.coords)
     
     def changeImage(self):
@@ -176,7 +180,6 @@ class gameScreen():
     def gatherSprites(self):
         self.convertSprites(lambda sprites: self.game.gatherBaseSprites(sprites), self.allsprites)
         
-        
     def menuHandle(self, aEvent):
         if self.gameMenuHandle(aEvent):
             self.menuDrawn = False
@@ -188,7 +191,6 @@ class gameScreen():
             self.convertSprites(lambda sprites: self.game.gatherSpecialSprites(sprites), self.specialsprites)
             self.menuDrawn = True
             self.updateScreen()
-
 
     def clearUpdateFlags(self):
         self.needsUpdate = False
@@ -204,7 +206,6 @@ class gameScreen():
         self.validPiece = None
         self.background = None
         self.needsUpdate = False
-        
         self.continueButton = None
         self.tiles = []
         self.sur = "" #main game drawing surface
@@ -214,9 +215,6 @@ class gameScreen():
         
         self.width = self.game.width
         self.height = self.game.height
-
-    def addSprite(self, aSprite):
-        self.allsprites.add(aSprite)
 
     def literallyDrawBoard(self):
         dw = True
@@ -240,7 +238,8 @@ class gameScreen():
                     
                 if j != self.width - 1:
                     dw = not dw
-                tile = onScreenTile((100+j*ts, 50+i*ts, ts, ts), color, ts, self.game.getTile(j, (self.height-1)-i))
+                c = corner((j*ts, i*ts))
+                tile = onScreenTile((c[0], c[1], ts, ts), color, ts, self.game.getTile(j, (self.height-1)-i))
                 tile.draw(self.background)
                 row.append(tile)
             self.tiles.append(row)
@@ -248,8 +247,8 @@ class gameScreen():
         self.drawnBoard = True
         
     def drawBoard(self):
-        
-        pygame.draw.rect(self.sur, black, pygame.Rect(99, 50-1, self.tileSize * self.width + 2, self.tileSize * self.height + 2), width=2)
+        c = corner((-1, -1))
+        pygame.draw.rect(self.sur, black, pygame.Rect(c[0], c[1], self.tileSize * self.width + 2, self.tileSize * self.height + 2), width=2)
         onScreenChar(str(math.ceil((1+self.game.turns)/2)), self.width//2, self.height + 1, self.sur, self.tileSize).draw()
         
         if not self.drawnBoard:
@@ -286,11 +285,12 @@ class gameScreen():
             self.clearUpdateFlags()
 
     def getValidPiece(self):
-        
-        if self.game.dragging() or not self.game.gameRunning():
+        gr = self.game.gameRunning()
+        if self.game.dragging() or not gr:
             if self.validPiece == self.game.validPiece():
                 return
             for item in self.allsprites:
+                    
                 if item.companion == self.game.validPiece():
                     self.validPiece = item
                     self.allsprites.change_layer(self.validPiece, 1)
@@ -307,7 +307,8 @@ class gameScreen():
         
 
     def returnButton(self, anX, aText, aLambda):
-        return button((300*anX + 50, 50, 200, 100), aText, self.sur, aLambda, (0, 255, 255))
+
+        return button((300*anX + 100, 150, 200, 100), aText, self.sur, aLambda, (0, 255, 255))
     
    
     def startGame(self):
