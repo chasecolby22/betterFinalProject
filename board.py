@@ -173,11 +173,21 @@ class tile():
         
         return self.piece.getHasMoved()
 
+    def dotIt(self, aColor):
+        self.circleColor = aColor
+        self.cdifferent = True
+
+    def resetDot(self):
+        self.circleColor = None
+        self.cdifferent = False
+        
+
     def __init__(self, i, j):
         self.piece = "EMPTY"
         self.neighbors = []
         self.knightNeighbors = []
-        self.different = False
+        self.bdifferent = False
+        self.cdifferent = False
         self.circleColor = None
         self.border = "black"
         self.bwidth = 2
@@ -189,13 +199,13 @@ class tile():
 
     def highlight(self, aColor):
         self.border = aColor
-        self.different = True
+        self.bdifferent = True
         self.bwidth = 3
 
     def reset(self):
         self.border = "black"
         self.bwidth = 2
-        self.different = False
+        self.bdifferent = False
 
 
     def getPos(self):

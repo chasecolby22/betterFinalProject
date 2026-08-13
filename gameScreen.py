@@ -5,20 +5,20 @@ white = (255, 255, 255)
 black = (0, 0, 0)
 pink = (255, 182, 193)
 blue = (173, 216, 230)
+font = pygame.font.SysFont("Arial", 42)
 
 def corner(aValue):
     return (aValue[0]+150, aValue[1]+50)
 
-font = pygame.font.SysFont("Arial", 42)
 
 
 class onScreenTile(pygame.Rect):
-    def __init__(self, aRect, aColor, aTileSize, aCompanion):
+    def __init__(self, aRect, aColor, aTileSize, aModel):
         super().__init__(aRect[0], aRect[1], aRect[2], aRect[3])
 
         self.tileSize = aTileSize #New tiles get created with resize
         
-        self.companion = aCompanion #Logic tile
+        self.model = aModel #Logic tile
 
         self.color = aColor #On screen color
         
@@ -27,9 +27,9 @@ class onScreenTile(pygame.Rect):
         
         pygame.draw.rect(aSurface, self.color, self) #Draw myself
 
-        border = self.companion.border
+        border = self.model.border
         if border == "black": border = black
-        pygame.draw.rect(aSurface, border, self, width = self.companion.bwidth) #Draw border
+        pygame.draw.rect(aSurface, border, self, width = self.model.bwidth) #Draw border
 
         if border != black:
            
@@ -41,9 +41,9 @@ class onScreenTile(pygame.Rect):
                 
             aSurface.blit(surr, self.topleft)
 
-        if self.companion.circleColor != None:
+        if self.model.circleColor != None:
             #Draw circle
-            pygame.draw.circle(aSurface, self.companion.circleColor, self.center, self.tileSize / 3)
+            pygame.draw.circle(aSurface, self.model.circleColor, self.center, self.tileSize / 3)
 
 class button(pygame.Rect):
     def __init__(self, aRectSpec, aText, aSurface, aLambda, aColor):
@@ -106,11 +106,11 @@ class onScreenChar():
         self.sur.blit(self.letter, self.rect)
 
 class onScreenSprite(pygame.sprite.Sprite):
-    def __init__(self, aCompanion, aTileSize, aHeight):
+    def __init__(self, aModel, aTileSize, aHeight):
         super().__init__()
-        self.companion = aCompanion #Logic piece
-        self.x = aCompanion.x 
-        self.y = aCompanion.y
+        self.model = aModel #Logic piece
+        self.x = aModel.x 
+        self.y = aModel.y
         self.coords = ""
         self.gameChosen = False
         self.image = False
@@ -139,7 +139,7 @@ class onScreenSprite(pygame.sprite.Sprite):
         
         transform = self.tileSize / magicNum
         if not self.rawImage:
-            image = "./" + self.companion.color + thing +"/" + self.companion.name() + ".png"
+            image = "./" + self.model.color + thing +"/" + self.model.name() + ".png"
             self.rawImage = pygame.image.load(image).convert_alpha()
         if transform != 1: self.image = pygame.transform.smoothscale_by(self.rawImage, transform)
         else: self.image = self.rawImage
@@ -155,15 +155,15 @@ class onScreenSprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center = self.coords)
 
     def update(self):
-        if self.companion.wantsEaten:
+        if self.model.wantsEaten:
             self.kill()
             return
-        if self.companion.needsChanged:
+        if self.model.needsChanged:
             self.rawImage = False
             self.changeImage()
-            self.companion.needsChanged = False
-        daX = self.companion.x
-        daY = self.companion.y
+            self.model.needsChanged = False
+        daX = self.model.x
+        daY = self.model.y
         if self.x != daX or self.y != daY:
             self.x = daX
             self.y = daY
@@ -258,14 +258,14 @@ class gameScreen():
             self.sur.blit(self.background)
             for row in self.tiles:
                 for item in row:
-                    if item.companion.different:
+                    if item.model.cdifferent or item.model.bdifferent:
                         item.draw(self.sur)
 
     
     def reset(self):
         for row in self.tiles:
             for item in row:
-                item.companion.circleColor = None
+                item.model.resetDot()
                 
 
     def updateScreen(self):
@@ -291,7 +291,7 @@ class gameScreen():
                 return
             for item in self.allsprites:
                     
-                if item.companion == self.game.validPiece():
+                if item.model == self.game.validPiece():
                     self.validPiece = item
                     self.allsprites.change_layer(self.validPiece, 1)
                     return
@@ -344,7 +344,7 @@ class gameScreen():
         self.drawStartScreen()
 
     def setUpStartScreen(self):
-        self.sur = pygame.display.set_mode((1000, 400))
+        self.sur = pygame.display.set_mode((1500, 400))
         self.sur.fill(white)
        
         self.buttons = []
@@ -490,7 +490,7 @@ class gameScreen():
                                 for row in self.tiles:
                                     for item in row:
                                         if item.collidepoint(event.pos):
-                                            tile = item.companion
+                                            tile = item.model
                                 if gameOver:
                                     
                                     if self.continueHandle(event):
@@ -510,7 +510,7 @@ class gameScreen():
                                             anArray = self.game.handleEvent(event, tile)
                                             
                                         
-                                            if anArray[0]:
+                                            if not anArray[0]:
                                                 "Code here incase needed later, user has made a valid move"
                                             if not anArray[1] and anArray[0]:
                                                 
@@ -542,7 +542,7 @@ class gameScreen():
     def resizeScreen(self):
         for row in self.tiles:
             for item in row:
-                item.companion.reset()
+                item.model.reset()
         newScreenSize = self.getScreenSize()
         if newScreenSize[0] > self.screenSize[0] or newScreenSize[1] > self.screenSize[1]:
             self.screenSize = newScreenSize

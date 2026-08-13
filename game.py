@@ -66,9 +66,16 @@ class game(board):
 class chess(game):
 
     @classmethod
+    def hardStandardGame(cls, aScreen):
+        thing = cls(8, 8, cls.standardPieceList(), True, True)
+        thing.startGame()
+        aScreen.game = thing
+        aScreen.startGame()
+
+    @classmethod
     def standardGame(cls, aScreen):
         thing = cls(8, 8, cls.standardPieceList(), True)
-        thing.startGame(0, 0)
+        thing.startGame()
         aScreen.game = thing
         aScreen.startGame()
         
@@ -83,7 +90,7 @@ class chess(game):
     @classmethod
     def startTest(cls, aScreen):
         thing = cls(16, 4, cls.testPieceList(), False)
-        thing.startGame(0, 0)
+        thing.startGame()
 
         aScreen.game = thing
         aScreen.startGame() 
@@ -91,7 +98,7 @@ class chess(game):
     @classmethod
     def grabThings(cls):
         
-        return ["No Bots", lambda aScreen: cls.standardGame(aScreen), "Bots", lambda aScreen: cls.botGame(aScreen), "test", lambda aScreen: cls.startTest(aScreen)]
+        return ["No Bots", lambda aScreen: cls.standardGame(aScreen), "NoBotHard", lambda aScreen: cls.hardStandardGame(aScreen), "Bots", lambda aScreen: cls.botGame(aScreen), "test", lambda aScreen: cls.startTest(aScreen)]
     
     @classmethod
     def standardPieceList(cls):
@@ -103,7 +110,7 @@ class chess(game):
     
 
     
-    def __init__(self, width, height, pieceList, wantsBot):
+    def __init__(self, width, height, pieceList, wantsBot, hardMode = False):
 
         
         super().__init__(width, height, pieceList)
@@ -118,6 +125,7 @@ class chess(game):
         self.height = height
         self.specialPieces = []
         self.checkers = ""
+        self.hardMode = hardMode
         if wantsBot:
             self.myBotHandler = botHandler()
             self.botChoice = ""
@@ -148,12 +156,12 @@ class chess(game):
         
     def drawPos(self):
         pos = False
-        for tile in self.posibleMoves():
-            if tile.border == (255, 100, 0): tile.reset()
-            tile.circleColor = (255, 150, 0)
-            tile.different = True
+        if not self.hardMode:
+            for tile in self.posibleMoves():
+                if tile.border == (255, 100, 0): tile.reset()
+                tile.dotIt((255, 150, 0))
 
-            pos = True
+                pos = True
         return pos
     
     def prepare(self):
@@ -218,8 +226,8 @@ class chess(game):
         return self.checkers
     
     def posibleMoves(self):
-        
-        return self.activePlayer.posibleMoves
+        if not self.hardMode:
+            return self.activePlayer.posibleMoves
     
     def bbotChoice(self):
         return self.botChoice
@@ -248,7 +256,7 @@ class chess(game):
     def createBotPlayer2(self, aDifficulty):
         self.player2 = botPlayer(False, aDifficulty, self.pieceList, self.height)
        
-    def startGame(self, player1dif, player2dif):
+    def startGame(self, player1dif = 0, player2dif = 0):
         
         self.player1 = ""
         self.player2 = ""
@@ -314,9 +322,7 @@ class chess(game):
                 self.botChoice = ""
             
             for item in self.botChoice:
-                
-                item.circleColor = (0, 100, 0) 
-                item.different = True
+                item.dotIt((0, 100, 0))
 
     
 

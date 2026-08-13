@@ -204,7 +204,7 @@ class rook(piece):
     
     def findMoves(self, fromTile, op, kingTile):
         moves = []
-        #8 is not a magic number is it the number of directions
+        #8 is not a magic number is it the number of directions (nesw and 4 diag)
         for i in range(8):
             if i % 2 == 1:
                 continue
@@ -216,6 +216,10 @@ class rook(piece):
     def name(self):
         return "rook"
 
+class dumbPawn(dumbPiece):
+    def name(self):
+        return "pawn"
+    
 class pawn(piece):
 
     def name(self):
@@ -234,8 +238,8 @@ class pawn(piece):
             if destTile.isEmpty() or destTile.getColor() == self.color:
                 
                 return False
-            else:
-                return default(destTile)
+          
+            return default(destTile)
             
         
         elif destTile == front.getNeighbor(2+magicNum):
@@ -252,13 +256,13 @@ class pawn(piece):
         return False
     
     def checkDiag(self, aTile):
-        if aTile.isNullTile():
-            return False
-        if not aTile.isEmpty() and aTile.getColor() != self.color:
-            return True
         if aTile == self.enPassantTile:
             return True
-        return False
+        if aTile.isNullTile() or aTile.isEmpty() or aTile.getColor() == self.color:
+            return False
+       
+        return True
+       
     
     def findMoves(self, myTile, op, kingTile):
         
